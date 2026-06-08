@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.local
+state/*.json
+state/*.sqlite
+state/*.sqlite-*

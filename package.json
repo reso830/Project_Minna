@@ -1,0 +1,23 @@
+{
+  "name": "project-minna",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Orchestrator for Spec Kit-style AI-assisted development workflows.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test \"dist/**/*.test.js\"",
+    "start": "node dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "serve:mcp": "node dist/server/mcp.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

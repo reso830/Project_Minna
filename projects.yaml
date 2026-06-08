@@ -1,0 +1,7 @@
+projects:
+  monica:
+    name: Project_Monica
+    path: D:/Alvin/_CodeProjects/Project_Monica
+    github: reso830/Project_Monica
+    speckit_dir: .specify
+    default_branch: main
