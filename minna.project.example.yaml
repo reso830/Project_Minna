@@ -1,0 +1,7 @@
+project:
+  key: monica
+  name: Project_Monica
+  path: .
+  github: reso830/Project_Monica
+  speckit_dir: .specify
+  default_branch: main
