@@ -13,8 +13,12 @@ async function readState(): Promise<StateFile> {
   try {
     const text = await readFile(STATE_FILE, "utf8");
     return JSON.parse(text) as StateFile;
-  } catch {
-    return { features: [] };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { features: [] };
+    }
+    // Corrupt or unreadable state must surface, not be silently overwritten.
+    throw error;
   }
 }
 
