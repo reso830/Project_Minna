@@ -58,7 +58,33 @@ test("resolves central project config by key", async () => {
 
     assert.equal(context.mode, "central");
     assert.equal(context.key, "monica");
-    assert.equal(context.project.path, projectPath.replaceAll("\\", "/"));
+    assert.equal(context.project.path, projectPath);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("resolves relative central project paths from projects.yaml location", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-central-relative-"));
+
+  try {
+    await writeFile(
+      join(dir, "projects.yaml"),
+      [
+        "projects:",
+        "  monica:",
+        "    name: Project_Monica",
+        "    path: ./Project_Monica",
+        "    speckit_dir: .specify",
+        ""
+      ].join("\n"),
+      "utf8"
+    );
+
+    const context = await resolveProjectContext({ cwd: dir, projectKey: "monica" });
+
+    assert.equal(context.mode, "central");
+    assert.equal(context.project.path, join(dir, "Project_Monica"));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

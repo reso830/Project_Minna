@@ -8,7 +8,8 @@ It is intended to sit beside target project repositories and coordinate Spec Kit
 
 ```text
 Project_Minna/
-  projects.yaml             # Target project registry
+  projects.example.yaml     # Template for target project registry
+  projects.yaml             # Local target project registry, ignored by git
   policies.yaml             # Role and approval rules
   workflows/
     speckit-feature.yaml    # Feature lifecycle definition
@@ -25,6 +26,7 @@ Project_Minna/
 
 ```bash
 npm install
+cp projects.example.yaml projects.yaml
 npm run build
 npm run start -- status
 npm run start -- start-feature --project monica --title "Decision log"
@@ -52,6 +54,14 @@ node .minna/dist/cli.js start-feature --title "Decision log"
 ```
 
 Use [minna.project.example.yaml](./minna.project.example.yaml) as the starting point for target projects.
+
+## Scaffold Gaps
+
+This first version intentionally leaves a few parts as explicit follow-up work:
+
+- `policies.yaml` defines roles and gates, but enforcement is not wired yet.
+- Workflow phases can be inspected, but phase advancement commands are still pending.
+- State is file-backed for single-operator use; add locking before concurrent CLI and MCP writes.
 
 ## Pilot Intent
 

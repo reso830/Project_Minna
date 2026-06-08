@@ -4,7 +4,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
-import { listFeatures, recordDecision, recordManualTest, startFeature } from "../core/state.js";
+import { handleToolCall } from "./tools.js";
 
 const server = new Server(
   {
@@ -58,7 +58,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: "Record an operator manual test result.",
       inputSchema: {
         type: "object",
-        required: ["featureId", "passed", "notes"],
+        required: ["featureId", "passed"],
         properties: {
           featureId: { type: "string" },
           passed: { type: "boolean" },
@@ -71,23 +71,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 server.setRequestHandler(CallToolRequestSchema, async request => {
   const args = request.params.arguments ?? {};
-
-  switch (request.params.name) {
-    case "status":
-      return textResult(await listFeatures());
-    case "start_feature":
-      return textResult(await startFeature(String(args.project), String(args.title)));
-    case "record_decision":
-      return textResult(
-        await recordDecision(String(args.featureId), String(args.question), String(args.answer))
-      );
-    case "record_manual_test":
-      return textResult(
-        await recordManualTest(String(args.featureId), Boolean(args.passed), String(args.notes ?? ""))
-      );
-    default:
-      throw new Error(`Unknown tool: ${request.params.name}`);
-  }
+  return textResult(await handleToolCall(request.params.name, args));
 });
 
 function textResult(value: unknown) {

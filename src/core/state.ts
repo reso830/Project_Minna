@@ -20,6 +20,7 @@ async function readState(): Promise<StateFile> {
 
 async function writeState(state: StateFile): Promise<void> {
   await mkdir(STATE_DIR, { recursive: true });
+  // Single-operator scaffold: add file locking before concurrent CLI/MCP writes.
   await writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 

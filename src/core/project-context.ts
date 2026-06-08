@@ -1,8 +1,9 @@
 import { access, readFile } from "node:fs/promises";
 import { constants } from "node:fs";
-import { isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, normalize, resolve } from "node:path";
 import { parse } from "yaml";
-import type { EmbeddedProjectConfig, ProjectContext, ProjectsConfig } from "./types.js";
+import { loadProjects } from "./config.js";
+import type { EmbeddedProjectConfig, ProjectContext } from "./types.js";
 
 const CENTRAL_PROJECTS_FILE = "projects.yaml";
 const EMBEDDED_PROJECT_FILE = "minna.project.yaml";
@@ -32,7 +33,7 @@ export async function resolveProjectContext(
 
 async function resolveCentralProject(cwd: string, key: string): Promise<ProjectContext> {
   const configPath = resolve(cwd, CENTRAL_PROJECTS_FILE);
-  const config = parse(await readFile(configPath, "utf8")) as ProjectsConfig;
+  const config = await loadProjects(configPath);
   const project = config.projects[key];
 
   if (!project) {
@@ -42,7 +43,7 @@ async function resolveCentralProject(cwd: string, key: string): Promise<ProjectC
   return {
     key,
     mode: "central",
-    project
+    project: normalizeProjectPath(project, dirname(configPath))
   };
 }
 
@@ -54,10 +55,14 @@ async function resolveEmbeddedProject(cwd: string): Promise<ProjectContext> {
   return {
     key,
     mode: "embedded",
-    project: {
-      ...project,
-      path: isAbsolute(project.path) ? project.path : resolve(cwd, project.path)
-    }
+    project: normalizeProjectPath(project, cwd)
+  };
+}
+
+function normalizeProjectPath<T extends { path: string }>(project: T, baseDir: string): T {
+  return {
+    ...project,
+    path: isAbsolute(project.path) ? normalize(project.path) : resolve(baseDir, project.path)
   };
 }
 
