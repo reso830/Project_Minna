@@ -16,7 +16,7 @@ Implement a robust project registration and discovery system for Minna. This inc
 
 ## Constitution Check
 
-- **I. Human Authority:** CLI commands only provide information; humans edit YAML or run `select`.
+- **I. Human Authority:** CLI commands act strictly under explicit human instruction (editing YAML files, selecting projects, or running register/select commands).
 - **II. Deterministic Orchestration:** Selection is stored in a visible `session.json` file.
 - **V. Local-First Simplicity:** State is file-backed and human-readable.
 - **X. Workflow Smoke Testing:** Unit tests for path resolution and validation are mandatory.
@@ -53,25 +53,31 @@ src/
 - `src/core/config.ts`: Existing YAML loading.
 
 ### Files to Modify
-- `src/core/types.ts`: Add `ProjectStatus` enum and update `ProjectConfig`.
-- `src/core/project-context.ts`: Integrate session resolution and status filtering.
-- `src/cli.ts`: Add new command handlers.
+- `src/core/types.ts`: Add `ProjectStatus` enum and update `ProjectConfig` with the optional `status` field.
+- `src/core/project-context.ts`: Integrate session resolution, check physical directory existence on context resolution (throw error if missing), and check relative paths.
+- `src/core/config.ts`: Use `parseDocument` to load configs and throw on duplicate key validation errors.
+- `src/cli.ts`: Add `register`, `select`, `projects` commands, adding support for flags like `--status` and `--force`.
 
 ### Files to Create
 - `src/core/session.ts`: Logic for reading/writing `state/session.json`.
-- `src/core/validation.ts`: Schema validation for project configs.
-- `src/core/project-registry.test.ts`: Unit tests for resolution and validation.
+- `src/core/validation.ts`: Schema validation for project configs (validates fields, path syntax, and status values, defaulting status to 'active').
+- `src/core/project-registry.test.ts`: Unit tests for resolution, validation, duplicate checking, and directory checking.
 
 ## Data Flow
-1. **Resolution:** CLI starts -> Check `--project` flag -> Check `minna.project.yaml` (CWD) -> Check `state/session.json` -> Fail if no project found.
-2. **Selection:** `minna select <key>` -> Validate key exists in `projects.yaml` -> Write to `state/session.json`.
-3. **Listing:** `minna projects` -> Load `projects.yaml` -> Filter by status (optional) -> Display in table format.
+1. **Resolution:** CLI starts -> Check `--project` flag -> Check `minna.project.yaml` (CWD) -> Check `state/session.json` -> Validate that the resolved project directory exists on disk -> Fail if no project found or directory is missing.
+2. **Selection:** `minna select <key>` -> Validate key exists and is valid -> Write to `state/session.json`.
+3. **Listing:** `minna projects` -> Load `projects.yaml` using AST parse checking for duplicates -> Filter by status (optional via `--status` flag) -> Warn to stderr for any listed projects with missing directories -> Display in table format.
+4. **Registration:** `minna register --key <key> --name <name> --path <path> [--github <github>] [--speckit-dir <speckit-dir>] [--status <status>] [--default-branch <branch>] [--force]` -> Validate inputs -> Load registry as document -> Check for duplicate key -> Check path directory exists on disk (unless `--force` specified) -> Insert new node preserving YAML AST format -> Write back to `projects.yaml`.
 
 ## Validation Approach
 - **Unit Tests:**
+  - Parse-time duplicate key detection throws errors.
+  - Required fields and invalid status validation.
+  - Defaulting status to `active` when omitted.
+  - Path formatting vs directory existence warning on listing vs fatal error on resolution/registration.
   - Relative path resolution from different directory levels.
-  - Validation of missing required fields.
   - Priority ordering of project resolution sources.
 - **Smoke Tests:**
+  - `minna register` creates or appends to `projects.yaml`.
   - `minna select` followed by `minna status` (verifying session persistence).
-  - `minna projects` displaying both active and archived projects.
+  - `minna projects` displaying projects with optional status filtering.

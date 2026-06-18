@@ -9,9 +9,11 @@ The project already contains a `resolveProjectContext` function that handles:
 - **Path Normalization:** Correctly resolving relative paths based on the configuration file's location.
 
 **Gap:**
-- It does not support session persistence (Option B).
+- It does not support session persistence.
 - It does not handle the `status` field.
 - Validation is minimal (only existence of the project key).
+- It does not support a register CLI command to write to the central registry.
+- It does not handle duplicate key detection at parse-time.
 
 ### 2. State Management (`src/core/state.ts`)
 - Currently manages `features.json`.
@@ -32,13 +34,14 @@ Update `ProjectConfig` in `src/core/types.ts` and `src/core/config.ts` to includ
 ### 3. Metadata Validation
 Implement a robust validation helper that checks:
 - Required fields: `name`, `path`, `speckit_dir`.
-- Uniqueness of keys in `projects.yaml`.
-- Valid path format (resolvable string).
+- Uniqueness of keys in `projects.yaml` at parse-time.
+- Valid path format (resolvable string) and physical directory existence warnings/errors.
 
 ### 4. New CLI Commands
 - `minna projects`: List all projects from `projects.yaml`.
 - `minna select <key>`: Persist a project key to session state.
+- `minna register`: Register a project config into the central `projects.yaml` (with validation and path checks).
 
 ## Risks & Tradeoffs
 - **Mode Conflict:** If an operator selects project A in session state but runs the CLI from within project B (Embedded), the Embedded mode should win for zero-config local operation.
-- **State Corruption:** Manual edits to `session.json` or `projects.yaml` could break the orchestrator. Defensive parsing is required.
+- **State Corruption:** Manual edits to `session.json` or `projects.yaml` could break the orchestrator. Defensive parsing (like parse-time duplicate checking) is required.
