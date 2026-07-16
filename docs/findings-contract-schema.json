@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Minna Review Findings Contract v1",
+  "type": "object",
+  "required": ["schema_version", "verdict", "prior_findings", "new_findings"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+
+    "verdict": {
+      "type": "string",
+      "enum": ["approve", "changes_required", "unable_to_review"],
+      "description": "approve = no blocking or in-scope major findings remain. changes_required = at least one in-scope actionable finding. unable_to_review = you could not do the job (missing artifact, unreadable diff, broken repo); explain in unable_reason."
+    },
+
+    "unable_reason": {
+      "type": "string",
+      "description": "Required if and only if verdict is unable_to_review."
+    },
+
+    "prior_findings": {
+      "type": "array",
+      "description": "One entry for EVERY finding listed as open in the prompt. Empty array on a first review. Never omit a prior finding.",
+      "items": {
+        "type": "object",
+        "required": ["id", "disposition"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "integer" },
+          "disposition": {
+            "type": "string",
+            "enum": ["verified", "still_open", "superseded"],
+            "description": "verified = you inspected the current artifact and confirmed the fix is present and correct. still_open = not fixed or fixed incompletely. superseded = no longer applicable because the artifact changed."
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "new_findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "class", "verification", "summary", "evidence", "recommendation"],
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["blocker", "major", "minor", "nit"],
+            "description": "blocker = violates a stated requirement or is unsafe; must not merge. major = real defect. minor = should fix. nit = taste. NOTE: severity does not gate logic yet (constitution provisional) — emit it honestly; do not inflate."
+          },
+          "class": {
+            "type": "string",
+            "enum": ["in_scope", "out_of_scope", "non_actionable"],
+            "description": "in_scope = within this item's declared scope. out_of_scope = a real concern the spec defers or that belongs to another work item; it becomes a new backlog item, NOT sent back to the producer. non_actionable = observation only."
+          },
+          "verification": {
+            "type": "string",
+            "enum": ["checked", "asserted"],
+            "description": "checked = you actually inspected the artifact or ran a command and the evidence field contains what you observed. asserted = you believe this but did not verify it. BE HONEST. An asserted finding is shown to the human but is never routed back to the producer, so marking something checked that you did not check is worse than marking it asserted."
+          },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "summary": {
+            "type": "string",
+            "description": "One sentence. What is wrong."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "For verification=checked: the exact code you read, the command you ran and its output, or the requirement ID that is violated. Not a restatement of the summary."
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "What to do about it. Concrete."
+          }
+        }
+      }
+    }
+  },
+
+  "allOf": [
+    {
+      "if": {
+        "properties": { "verdict": { "const": "unable_to_review" } }
+      },
+      "then": {
+        "required": ["unable_reason"]
+      },
+      "else": {
+        "not": { "required": ["unable_reason"] }
+      }
+    }
+  ]
+}
