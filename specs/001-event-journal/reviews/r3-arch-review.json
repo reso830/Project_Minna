@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "spec.md's Non-goals (lines 81-84) now explicitly defer start-feature/decision/manual-test/workflow-phase-machine integration to M2, stating legacy operations continue on the JSON file untouched and 001 creates features in SQLite only via the write API with explicit status. plan.md's Areas Explicitly Out of Scope (lines 133-134) and Source Code section (lines 64-72, cli.ts noted 'start-feature is untouched') match. tasks.md removed the old state.ts-refactor tasks entirely (Phase 02 is now only T005-T007), and the smoke test (T013 step 2) seeds the database via a direct `createFeature` API call instead of the CLI's `start-feature`, sidestepping the missing-status gap I raised. Coherent, consistent scope decision, fully resolved."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "checklists/plan-review.md:7 now reads `Gate result: PASS (2026-07-16)`, and both CHK001 (line 11) and CHK009 (line 25) are checked `[x]`."
+    },
+    {
+      "id": 3,
+      "disposition": "verified",
+      "note": "contracts/api.md now has a proper title (line 1), intro, a `## 1. Type Definitions` header (line 7), and a matched opening/closing ` ```typescript ` fence (lines 9 and 27). Renders correctly."
+    },
+    {
+      "id": 4,
+      "disposition": "verified",
+      "note": "The production `recordEvent`/`createFeature`/`updateFeatureStatus` signatures in api.md (lines 41, 54, 65) no longer accept an `options`/`faultInjection` parameter. A new `## 3. Test-Only Internal API Methods` section (lines 88-95) defines `_recordEvent(..., options?: { faultInjection?: boolean })` explicitly documented as 'exported strictly for automated unit testing... must not be consumed by production code.' This matches one of the two remediations I suggested."
+    },
+    {
+      "id": 5,
+      "disposition": "verified",
+      "note": "tasks.md's Phase Summary Table (lines 20-24) now reads T001-T004 / T005-T007 / T008-T012 / T013 / T014-T018, and each range matches the actual tasks under the corresponding phase headers after renumbering."
+    },
+    {
+      "id": 6,
+      "disposition": "verified",
+      "note": "data-model.md:44 now reads `status TEXT NOT NULL, -- Current generic status string (required, caller-supplied, no default)`, matching the payload contract and fold logic elsewhere in the same file."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/data-model.md",
+      "line": 23,
+      "summary": "The new append-only triggers use `RAISE(FAIL, ...)`, which only aborts the triggering statement, not the enclosing transaction — so a tamperer who wraps a `features`-table tamper and a (blocked) `events`-table tamper in one explicit transaction can still successfully commit the `features` tamper.",
+      "evidence": "I ran this against `node:sqlite` (Node v24.14.1) using the exact trigger DDL from data-model.md:23-27: after `BEGIN`, `UPDATE features SET status='tampered' WHERE id=1` then `UPDATE events SET actor='tampered' WHERE id=1` (which the trigger blocks) then `COMMIT` — the `events` update throws 'no updates allowed' as expected, but `db.isTransaction` is still `true` afterward, and the subsequent `COMMIT` succeeds, leaving `features.status = 'tampered'`. Re-running the identical scenario with `RAISE(ROLLBACK, ...)` instead of `RAISE(FAIL, ...)` correctly aborts the whole transaction (`db.isTransaction` becomes `false` immediately on the error) and `features.status` remains `'ok'`. This matches SQLite's documented semantics: FAIL only skips restoring changes made by the current statement and leaves the transaction open, while ROLLBACK aborts the entire transaction. `minna verify`'s structural-drift check (AC4) would still catch the resulting `features` drift after the fact, so this is a gap in the trigger's own stated purpose ('enforce append-only behavior at the database engine level,' data-model.md:22) rather than a complete loss of detection.",
+      "recommendation": "Change both triggers in data-model.md (and the matching description in tasks.md T002) from `RAISE(FAIL, ...)` to `RAISE(ROLLBACK, ...)` so that any transaction containing a blocked `events` tamper is fully rolled back, not just the individual statement."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/plan.md",
+      "line": 14,
+      "summary": "plan.md characterizes `node:sqlite` as requiring 'engines.node >=22.11.0 for stable node:sqlite support,' but running it on Node v24.14.1 (which satisfies that constraint) still emits Node's own experimental-feature warning.",
+      "evidence": "Running `node -e \"require('node:sqlite')...\"` on the installed Node v24.14.1 (which is what `node --version` reports, and satisfies the stated `>=22.11.0` requirement) prints: `(node:...) ExperimentalWarning: SQLite is an experimental feature and might change at any time`. Node's own runtime disagrees with plan.md's 'stable' characterization at the exact version the plan cites as the threshold for stability.",
+      "recommendation": "Either soften the claim in plan.md's Technical Context to acknowledge `node:sqlite` is still flagged experimental by Node itself (a disclosed, accepted risk for this authoritative-state feature per Constitution VI), or cite the specific Node version/release notes where it is actually promoted out of experimental status if one exists."
+    }
+  ]
+}

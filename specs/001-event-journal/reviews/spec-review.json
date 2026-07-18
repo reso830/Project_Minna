@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/data-model.md",
+      "line": 99,
+      "summary": "The fold algorithm hardcodes `status: 'specify'` as the default for every `feature.created` event, contradicting the spec's clarification that status is generic and caller-supplied with no built-in default.",
+      "evidence": "data-model.md:47-53 shows the `feature.created` payload contains only `id` and `title` (no `status`), and `data-model.md:94-102`'s fold logic sets `status: 'specify'` unconditionally on creation. `contracts/api.md:54` (`createFeature(actor, id, title)`) gives the caller no parameter to supply an initial status at all, so 'specify' is not a caller choice, it's a forced constant. `spec.md`'s Data Considerations table states: '`status` ... Generic, caller-supplied string. The journal does not interpret its values — no enum, no default beyond what the creating event provides.' The clarification session in spec.md records the operator's answer as dropping `phase` specifically 'because phase is M2 workflow state and 001 must not model the domain.' 'specify' is precisely the legacy `PhaseId` value used today (`src/core/state.ts:42`: `phase: \"specify\"`), so hardcoding it as the new journal's status default reintroduces the exact M2 workflow vocabulary the clarification excluded.",
+      "recommendation": "Add `status` as a required parameter to `createFeature`/the `feature.created` payload (caller-supplied, no journal-side default), and remove the hardcoded `'specify'` literal from the fold algorithm in data-model.md. Update contracts/api.md and contracts/cli.md accordingly."
+    },
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 95,
+      "summary": "T010 treats replacing `phase` with `status` in `src/core/workflow.ts` as a one-line field rename, but the existing phase-machine logic it modifies is exactly the 'full work-item state machine / phase / workflow transitions' that spec.md's Non-goals explicitly excludes from this feature (M2/004).",
+      "evidence": "`src/core/workflow.ts:3-11` (`getCurrentPhase`) looks up `feature.phase` against `workflow.phases`, an array of `WorkflowPhase` objects (each with `gate` and `next`) loaded from `workflows/speckit-feature.yaml` (confirmed present) via `loadWorkflow()` in `src/core/config.ts:10`. `getNextAction` (`workflow.ts:13-25`) reports gate/next-phase transitions off this lookup, and `src/cli.ts:30-43`'s `status` command calls it today. spec.md's Non-goals state: 'The full work-item state machine, `phase`/workflow transitions, decisions, manual test results, or GitHub linkage (M2/004) — these belong to the legacy `FeatureState` shape being superseded, not to this feature.' tasks.md T010 (`specs/001-event-journal/tasks.md:95-98`) only says to 'review and update any status queries to check the `status` field instead of the legacy `phase` field,' which cannot both (a) keep `minna status`'s existing gate/next-phase reporting functioning, since a generic, uninterpreted `status` string cannot be matched against a closed, gated phase vocabulary, and (b) honor the spec's exclusion of that same phase/workflow-transition domain from this feature. The plan does not resolve which of these two outcomes is intended.",
+      "recommendation": "Decide explicitly in plan.md/tasks.md whether `minna status`'s phase/gate reporting is (a) removed/broken for this feature with a documented follow-up in 004, or (b) the workflow-phase machine is kept operating against a separately-named field that is out of this feature's scope. Either is acceptable, but the plan must state which, rather than leaving T010 as an implicit, unscoped rename."
+    },
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "asserted",
+      "file": "package.json",
+      "line": 8,
+      "summary": "package.json's `engines.node` (`>=22.0.0`) does not guarantee availability of `node:sqlite`, the module plan.md commits to as the persistence layer, without the plan updating this constraint.",
+      "evidence": "package.json:7-9 declares `\"engines\": { \"node\": \">=22.0.0\" }`. plan.md's Research decision is to use the built-in `node:sqlite` module, and research.md:9 claims Node 'has full, stable support for this module' as of the currently-running v24.14.1. I have not independently re-verified against live Node documentation in this session which minor version first shipped `node:sqlite` or its current stability tier, so I'm flagging this as asserted rather than checked — but no artifact in the package updates `engines.node` to reflect whatever minimum version this feature actually requires, which is a gap regardless of the exact number.",
+      "recommendation": "Confirm the minimum Node version that ships a usable `node:sqlite` and its current stability tier, then raise `engines.node` in package.json to match and note the dependency explicitly in plan.md's Technical Context."
+    },
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 152,
+      "summary": "The required smoke test (T017) and quickstart.md both depend on an external `sqlite3` CLI binary, contradicting the plan's own stated rationale for choosing `node:sqlite` (avoiding native/external tooling problems, called out specifically for Windows) and risking an unexecutable smoke-test gate.",
+      "evidence": "tasks.md:152 (T017 step 5) runs `sqlite3 .minna/minna.db \"UPDATE features SET status = 'corrupted' ...\"`, and quickstart.md:10-12 tells developers to run `sqlite3 .minna/minna.db` to inspect the database. research.md:13 explicitly rejects `better-sqlite3`/`sqlite3` npm packages because they 'require native compilation which can fail on some environments (especially Windows developer machines)' in favor of the dependency-free `node:sqlite` module. The `sqlite3` command-line client is a separate, unrelated binary from Node's `node:sqlite` module and is not guaranteed to be installed on the operator's machine (this session's own environment is Windows). Constitution IX requires smoke tests to be 'practical to execute.'",
+      "recommendation": "Replace the `sqlite3` CLI invocation in T017 and quickstart.md with a small Node script (or an existing project script) that opens `.minna/minna.db` via `node:sqlite` directly to perform the corruption/inspection, so the smoke test has no dependency beyond what the feature itself already requires."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/contracts/api.md",
+      "line": 8,
+      "summary": "The `Actor` type (`\"human\" | \"system\" | string`) widens to plain `string` in TypeScript, so it provides no compile-time narrowing or documentation value beyond what a bare `string` type would give.",
+      "evidence": "contracts/api.md:8: `export type Actor = \"human\" | \"system\" | string;`. When a union includes a literal alongside its own supertype (`string`), TypeScript collapses the type to `string` — the `\"human\" | \"system\"` literals are absorbed and no longer offer autocomplete or narrowing at call sites.",
+      "recommendation": "If the intent is genuinely open-ended agent-id strings (per Const. XVI, agent identifiers aren't uniform), document that `Actor` is intentionally just `string` and drop the misleading literal union. If narrowing is wanted for the two fixed values, use a branded/nominal type instead."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 32,
+      "summary": "T001 instructs re-declaring `EventEnvelope`/`FeatureProjection` in `src/core/types.ts`, duplicating the same type definitions already given verbatim in contracts/api.md, with no stated single source of truth.",
+      "evidence": "tasks.md:32-36 (T001) says to 'introduce type interfaces `EventEnvelope` and `FeatureProjection` corresponding to the schemas in api.md,' while contracts/api.md:6-25 already fully defines `Actor`, `EventEnvelope`, and `FeatureProjection` as TypeScript interfaces. Nothing in plan.md or tasks.md states that one of these is authoritative and the other is documentation-only, so the two are free to drift once either is edited.",
+      "recommendation": "State explicitly (e.g. in plan.md's Project Structure section) that contracts/api.md is illustrative and `src/core/types.ts` is the sole source of truth for these types, or vice versa — pick one and say so, per Constitution XII (avoid duplicate architecture)."
+    }
+  ]
+}

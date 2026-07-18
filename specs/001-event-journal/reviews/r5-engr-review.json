@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "spec.md and plan.md now state that the legacy CLI and MCP mutation tools are disabled in M1; T013 removes their MCP advertisements and makes handler calls fail closed, and T014 adds a handler-level smoke test."
+    },
+    {
+      "id": 9,
+      "disposition": "verified",
+      "note": "The exact-one-creator invariant remains consistently specified across the current package."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/plan.md",
+      "line": 84,
+      "summary": "The plan's write-flow diagram still routes journal creation and status updates through src/core/state.ts, contradicting the declared M1 boundary that leaves that JSON-backed module untouched.",
+      "evidence": "plan.md's Architecture and Data Flow labels the write path '[src/core/state.ts: createFeature / updateFeatureStatus]' before db.ts, while its Affected Areas explicitly declares src/core/state.ts untouched and T007 implements createFeature/updateFeatureStatus in src/core/db.ts. The same plan's source-tree comment says start-feature is untouched even though T013 modifies it to fail closed.",
+      "recommendation": "Update the plan diagram and source-tree description to show the database API as the M1 write boundary and the legacy CLI as disabled, matching the tasks and explicit scope decision."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/quickstart.md",
+      "line": 64,
+      "summary": "The corrected quickstart uses the legacy workflow-phase label 'specify' as the initial generic journal status, blurring the feature's explicit M2 phase-boundary.",
+      "evidence": "quickstart.md now passes 'specify' as the required fourth createFeature argument. spec.md's clarification and Non-goals say phase/workflow transitions are M2 concerns and status is a generic caller-supplied value with no journal interpretation; 'specify' is the legacy phase value in src/core/state.ts. The example therefore appears to reintroduce the excluded phase vocabulary as the journal's suggested initial status.",
+      "recommendation": "Use a neutral example status such as 'initial' and state that it is application-defined, not a workflow phase or default."
+    }
+  ]
+}

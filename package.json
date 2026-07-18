@@ -1,14 +1,15 @@
 {
   "name": "project-minna",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Orchestrator for Spec Kit-style AI-assisted development workflows.",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.11.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
     "test": "npm run build && node --test \"dist/**/*.test.js\"",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli.ts",

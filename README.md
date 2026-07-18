@@ -19,7 +19,7 @@ Project_Minna/
     core/                   # State, workflow, policy, project loading
     server/
       mcp.ts                # MCP tool surface
-  state/                    # Local orchestrator state
+  .minna/                   # Local SQLite event journal (ignored by git)
 ```
 
 ## Initial Commands
@@ -29,8 +29,9 @@ npm install
 cp projects.example.yaml projects.yaml
 npm run build
 npm run start -- status
-npm run start -- start-feature --project monica --title "Decision log"
-npm run start -- serve-mcp
+npm run start -- log
+npm run start -- verify
+npm run start -- export --feature <id> ./specs/001-event-journal
 ```
 
 ## Project Modes
@@ -50,7 +51,7 @@ In embedded mode, `--project` can be omitted:
 
 ```bash
 cd D:/Alvin/_CodeProjects/Project_Monica
-node .minna/dist/cli.js start-feature --title "Decision log"
+node .minna/dist/cli.js log
 ```
 
 Use [minna.project.example.yaml](./minna.project.example.yaml) as the starting point for target projects.
@@ -61,7 +62,26 @@ This first version intentionally leaves a few parts as explicit follow-up work:
 
 - `policies.yaml` defines roles and gates, but enforcement is not wired yet.
 - Workflow phases can be inspected, but phase advancement commands are still pending.
-- State is file-backed for single-operator use; add locking before concurrent CLI and MCP writes.
+- The M1 source of truth is the local SQLite journal at `.minna/minna.db`; its
+  `features` table is a projection of append-only events.
+- Concurrent SQLite writers are not yet handled; M1 is intentionally single-operator.
+
+## Event Journal
+
+The journal is initialized automatically by CLI commands and is the local authority
+for M1 feature identity and generic status.
+
+```bash
+# Render the full event timeline or one feature's history
+npm run start -- log
+npm run start -- log --feature <id>
+
+# Confirm the projection matches the append-only event log
+npm run start -- verify
+
+# Create a committable Markdown timeline at <dir>/journal.md
+npm run start -- export --feature <id> <dir>
+```
 
 ## Pilot Intent
 

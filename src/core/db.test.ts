@@ -1,0 +1,190 @@
+import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
+import {
+  _recordEvent,
+  createFeature,
+  exportFeatureJournal,
+  initDb,
+  readEvents,
+  updateFeatureStatus,
+  verifyDb,
+} from "./db.js";
+
+async function withScratchDb(run: (db: DatabaseSync) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), "minna-journal-write-"));
+  const dbPath = join(dir, "minna.db");
+  let db: DatabaseSync | undefined;
+
+  try {
+    await initDb(dbPath);
+    db = new DatabaseSync(dbPath);
+    await run(db);
+  } finally {
+    db?.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+test("initializes journal tables and append-only triggers in a scratch database", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-journal-init-"));
+  const dbPath = join(dir, "minna.db");
+
+  try {
+    await initDb(dbPath);
+
+    const db = new DatabaseSync(dbPath);
+    const schemaNames = db
+      .prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'trigger')")
+      .all()
+      .map(row => String((row as { name: string }).name));
+
+    for (const name of ["events", "features", "prevent_event_update", "prevent_event_delete"]) {
+      assert.ok(schemaNames.includes(name), `expected ${name} to be initialized`);
+    }
+    db.close();
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("rolls back an injected failure without persisting its event or projection", async () => {
+  await withScratchDb(async db => {
+    await assert.rejects(
+      () => _recordEvent(
+        db,
+        "human",
+        "feature.created",
+        { id: "atomic-feature", title: "Atomic Feature", status: "initial" },
+        { faultInjection: true },
+      ),
+      /fault injection/i,
+    );
+
+    assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM events").get() as { count: number }).count), 0);
+    assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM features").get() as { count: number }).count), 0);
+  });
+});
+
+test("append-only triggers roll back the full transaction for event updates and deletes", async () => {
+  for (const statement of ["UPDATE events SET actor = 'tampered' WHERE id = 1", "DELETE FROM events WHERE id = 1"]) {
+    await withScratchDb(async db => {
+      db.prepare(
+        "INSERT INTO events (timestamp, actor, type, payload) VALUES (?, ?, ?, ?)",
+      ).run("2026-07-17T00:00:00.000Z", "human", "feature.created", '{"id":"seed"}');
+
+      db.exec("BEGIN TRANSACTION");
+      db.prepare(
+        "INSERT INTO features (id, title, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      ).run("companion", "Companion", "initial", "2026-07-17T00:00:00.000Z", "2026-07-17T00:00:00.000Z");
+
+      assert.throws(() => db.exec(statement), /not allowed/i);
+      assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM features").get() as { count: number }).count), 0);
+    });
+  }
+});
+
+test("rejects an update for an unknown feature without appending an event", async () => {
+  await withScratchDb(async db => {
+    await assert.rejects(
+      () => updateFeatureStatus(db, "human", "unknown-feature", "updated"),
+      /unknown|not found/i,
+    );
+
+    assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM events").get() as { count: number }).count), 0);
+    assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM features").get() as { count: number }).count), 0);
+  });
+});
+
+test("rejects duplicate feature creation without appending a second creator event", async () => {
+  await withScratchDb(async db => {
+    const created = await createFeature(db, "human", "unique-feature", "Unique Feature", "initial");
+    assert.equal(created.status, "initial");
+    assert.equal(created.created_at, created.updated_at);
+
+    await assert.rejects(
+      () => createFeature(db, "human", "unique-feature", "Duplicate Feature", "initial"),
+      /duplicate|already exists/i,
+    );
+
+    assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM events").get() as { count: number }).count), 1);
+    assert.equal(Number((db.prepare("SELECT COUNT(*) AS count FROM features").get() as { count: number }).count), 1);
+  });
+});
+
+test("reads feature events in journal order using an exact payload id filter", async () => {
+  await withScratchDb(async db => {
+    await createFeature(db, "human", "journal-feature", "Journal Feature", "initial");
+    await updateFeatureStatus(db, "system", "journal-feature", "updated");
+    await createFeature(db, "human", "journal-feature-other", "Other Feature", "initial");
+
+    const events = await readEvents(db, { featureId: "journal-feature" });
+
+    assert.deepEqual(events.map(event => event.type), ["feature.created", "feature.status_updated"]);
+    assert.deepEqual(events.map(event => (event.payload as { id: string }).id), ["journal-feature", "journal-feature"]);
+    assert.ok((events[0].id ?? 0) < (events[1].id ?? 0));
+  });
+});
+
+test("verifyDb reports field-level drift after direct projection tampering", async () => {
+  await withScratchDb(async db => {
+    await createFeature(db, "human", "drift-feature", "Drift Feature", "initial");
+    assert.equal((await verifyDb(db)).consistent, true);
+
+    db.prepare("UPDATE features SET status = ? WHERE id = ?").run("tampered", "drift-feature");
+    const verification = await verifyDb(db);
+
+    assert.equal(verification.consistent, false);
+    assert.ok(verification.discrepancies.some(message => message.includes("drift-feature") && message.includes("status")));
+  });
+});
+
+test("verifyDb reports an orphaned projection row", async () => {
+  await withScratchDb(async db => {
+    db.prepare(
+      "INSERT INTO features (id, title, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    ).run("orphan-feature", "Orphan Feature", "initial", "2026-07-18T00:00:00.000Z", "2026-07-18T00:00:00.000Z");
+
+    const verification = await verifyDb(db);
+
+    assert.equal(verification.consistent, false);
+    assert.ok(verification.discrepancies.some(message => message.includes("orphan-feature") && message.includes("no corresponding feature.created")));
+  });
+});
+
+test("verifyDb reports duplicate feature creation events", async () => {
+  await withScratchDb(async db => {
+    await createFeature(db, "human", "duplicate-creator", "Duplicate Creator", "initial");
+    db.prepare(
+      "INSERT INTO events (timestamp, actor, type, payload) VALUES (?, ?, ?, ?)",
+    ).run(
+      "2026-07-18T00:00:01.000Z",
+      "human",
+      "feature.created",
+      '{"id":"duplicate-creator","title":"Duplicate Creator","status":"initial"}',
+    );
+
+    const verification = await verifyDb(db);
+
+    assert.equal(verification.consistent, false);
+    assert.ok(verification.discrepancies.some(message => message.includes("duplicate-creator") && message.includes("more than one feature.created")));
+  });
+});
+
+test("exports a feature timeline as Markdown and rejects an unknown feature", async () => {
+  await withScratchDb(async db => {
+    await createFeature(db, "human", "export-feature", "Export Feature", "initial");
+    await updateFeatureStatus(db, "system", "export-feature", "updated");
+
+    const markdown = await exportFeatureJournal(db, "export-feature");
+
+    assert.match(markdown, /# Event Journal: Export Feature/);
+    assert.match(markdown, /\| Timestamp \(UTC\) \| Actor \| Event Type \| Description \/ Detail \|/);
+    assert.match(markdown, /feature\.created/);
+    assert.match(markdown, /feature\.status_updated/);
+    await assert.rejects(() => exportFeatureJournal(db, "missing-feature"), /No such feature 'missing-feature'/);
+  });
+});

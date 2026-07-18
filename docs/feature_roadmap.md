@@ -109,7 +109,7 @@ The milestone labels **M0–M4** used during design map onto releases as noted.
 **M1 — Safety Net** (each is independently useful; if work stops here, the worst
 failure mode is already gone):
 
-* [ ] 001-event-journal — SQLite append-only events + same-transaction projections;
+* [x] 001-event-journal — SQLite append-only events + same-transaction projections;
   `minna log`, `minna verify`, `minna export`. *Supersedes `state.ts`.*
 * [ ] 002-git-checkpoints — dangling-commit checkpoints capturing untracked +
   configured-gitignored work; monotonic create-only refs; `minna checkpoint`,

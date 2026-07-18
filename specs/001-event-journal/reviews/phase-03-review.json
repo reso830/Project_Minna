@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [],
+  "new_findings": [
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "src/core/db.test.ts",
+      "line": 132,
+      "summary": "`verifyDb`'s orphan-row and duplicate-creator invariant checks (AC5, and T009's own constraint text) are implemented but have no automated test — only field-level drift (AC4) is tested, in both `db.test.ts` and `cli.test.ts`.",
+      "evidence": "db.ts:255-323 (`verifyDb`) contains working logic for both cases: a second `feature.created` event for the same id pushes 'more than one feature.created event' (lines 265-267), and a stored `features` row with no matching creation event pushes 'no corresponding feature.created event' (lines 309-314) — I traced both paths and they're correct. But the only verify-related test in db.test.ts (`verifyDb reports field-level drift after direct projection tampering`, line 132) and the only one in cli.test.ts (`verifies a clean journal and reports field-level projection drift`) both exercise a direct `UPDATE features SET status = ...` tamper (AC4), not an orphan-insert or duplicate-creation-event scenario (AC5). T009's constraint text explicitly calls out 'Any duplicate creation events or missing creation events trigger verification failure' as required behavior; T010's own Validation line only asked for the drift test, so the letter of the declared tasks is met, but AC5 itself is unverified by any test.",
+      "recommendation": "Add a test seeding two `feature.created` events for the same id via raw SQL and one inserting a `features` row with no creating event, then asserting `verifyDb()`/`minna verify` reports each specific invariant violation and exits non-zero."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "src/server/mcp.ts",
+      "line": 21,
+      "summary": "T013 item 4 (remove the three legacy tools from the advertised MCP tools list) is correctly implemented, but nothing tests it — only `handleToolCall`'s throwing behavior (T013 item 3) has automated coverage.",
+      "evidence": "mcp.ts:21-32's `ListToolsRequestSchema` handler now returns only the `status` tool object — I read the file directly and confirmed `start_feature`/`record_decision`/`record_manual_test` are absent. `src/server/tools.test.ts` only calls `handleToolCall` directly for those three names and asserts they reject; nothing exercises the `ListToolsRequestSchema` handler's returned tool list. `mcp.ts` connects a real stdio transport at module load (`await server.connect(transport)`, line 51), which makes it awkward to unit-test as written.",
+      "recommendation": "Extract the tools array (or the `ListToolsRequestSchema` handler logic) into an exported, independently-testable function so a test can assert the three disabled tools are absent from the list, without needing to actually start the stdio server."
+    },
+    {
+      "severity": "nit",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "src/cli.ts",
+      "line": 107,
+      "summary": "`exportCommand`'s target-directory parsing uses a fixed offset (`args[featureIndex + 2]`) relative to `--feature`'s position, which only works if `--feature <id>` appears immediately before `<dir>`; it would silently misparse a different argument order.",
+      "evidence": "cli.ts:108-110: `const featureIndex = args.indexOf(\"--feature\"); const targetDirectory = featureIndex === -1 ? undefined : args[featureIndex + 2];`. This is correct for the documented and tested invocation `export --feature <id> <dir>`, but e.g. `export <dir> --feature <id>` would compute the wrong index rather than failing clearly.",
+      "recommendation": "Optional: parse `<dir>` as 'the first positional argument not consumed by a flag' rather than a fixed offset from `--feature`, for resilience against argument reordering. Not blocking since the documented usage is fixed and tested."
+    }
+  ]
+}

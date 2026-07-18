@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "CHK001 is now satisfied: the current tasks no longer include recordDecision, recordManualTest, workflow-machine changes, checkpoints, agent runners, or review-gate work."
+    },
+    {
+      "id": 9,
+      "disposition": "verified",
+      "note": "The current spec, plan, data model, and T005/T009 consistently require exactly one feature.created event per projection row and fail closed on duplicate creation."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/spec.md",
+      "line": 81,
+      "summary": "Deferring the legacy commands while explicitly leaving them to mutate state/features.json preserves a file-backed authoritative state path, contradicting the event-journal mandate.",
+      "evidence": "spec.md's Non-goals says start-feature, decision/manual-test recording, and workflow coupling remain untouched and continue to read/write state/features.json. plan.md repeats that legacy commands operate on JSON while SQLite features are created separately. The current src/core/state.ts confirms startFeature, updateFeaturePhase, recordDecision, and recordManualTest mutate state/features.json. Constitution III requires authoritative state to be an append-only journal with a same-transaction projection, and Constitution VI explicitly rejects hand-editable flat-file authoritative state. This feature brief also states that 001 supersedes src/core/state.ts.",
+      "recommendation": "Do not retain JSON mutations as an authoritative path. Either migrate every retained state mutation to same-transaction journal events within this feature, or disable/remove the legacy state-mutating commands until their journal-backed M2 replacements are implemented; document the chosen behavior without treating state/features.json as live state."
+    }
+  ]
+}
