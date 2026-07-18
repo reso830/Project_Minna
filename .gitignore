@@ -6,3 +6,4 @@ projects.yaml
 state/*.json
 state/*.sqlite
 state/*.sqlite-*
+.minna/

@@ -11,7 +11,7 @@ The Event Journal is Minna's local-first authoritative state store. We will repl
 
 ## Technical Context
 
-* **Language/Version**: Node.js (TypeScript, ES Modules, running Node v24.14.1; requires engines.node >=22.11.0 for built-in `node:sqlite` module support. Note that `node:sqlite` is currently flagged as experimental by Node.js and prints an `ExperimentalWarning` on execution, which is an accepted risk for M1 per Constitution VI).
+* **Language/Version**: Node.js (TypeScript, ES Modules, running Node v24.14.1; requires engines.node >=22.13.0 because that is the first Node 22 release where built-in `node:sqlite` no longer requires the `--experimental-sqlite` runtime flag. Note that `node:sqlite` is currently flagged as experimental by Node.js and prints an `ExperimentalWarning` on execution, which is an accepted risk for M1 per Constitution VI).
 * **Primary Dependencies**: Built-in `node:sqlite` (zero npm dependencies)
 * **Storage**: SQLite (`.minna/minna.db`)
 * **Testing**: Node.js built-in test runner (`node --test`)

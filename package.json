@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Orchestrator for Spec Kit-style AI-assisted development workflows.",
   "engines": {
-    "node": ">=22.11.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
