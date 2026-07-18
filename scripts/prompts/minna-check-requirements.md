@@ -48,6 +48,19 @@ item:
 
 Editing only `checklists/plan-review.md` is expected here and does not violate read-only.
 
+## The findings JSON is canonical; the checklist is a view over it
+
+To avoid two divergent review records (constitution XII, XV — the findings contract is
+the single review output format):
+- The **findings JSON is the canonical, complete record** of this review.
+- `checklists/plan-review.md` is a **PASS/FAIL view over the mandatory pre-implementation
+  items only** — a structured summary, not a second ledger.
+- **Every checklist item you leave open (`[ ]`) because of a real gap MUST have a
+  corresponding finding in the JSON.** A checklist item cannot fail without a matching
+  finding; the JSON and the checklist can never disagree. If the gate is FAIL, the JSON
+  is `changes_required` (or `unable_to_review`); if the gate is PASS with no other
+  findings, the JSON is `approve`.
+
 Emit findings as a JSON file per `docs/findings-contract.md`, validated against the
 schema. First line of your chat response:
 - `Ready`     — verdict `approve` (and the gate is PASS)

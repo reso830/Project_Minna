@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Minna Producer Response v1",
+  "type": "object",
+  "required": ["schema_version", "responds_to", "responses"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "responds_to": {
+      "type": "string",
+      "description": "Filename of the reviewer findings file this responds to, e.g. r1-arch-review.json."
+    },
+    "responses": {
+      "type": "array",
+      "description": "One entry per finding in the review being responded to. Every finding id must appear exactly once.",
+      "items": {
+        "type": "object",
+        "required": ["id", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "integer" },
+          "action": {
+            "type": "string",
+            "enum": ["addressed", "contested", "deferred"],
+            "description": "addressed = the producer made the change. contested = the producer disagrees and left the artifact unchanged, with reasoning. deferred = the operator explicitly marked this Accepted/out-of-scope. The producer never uses verified/superseded/waived."
+          },
+          "change": {
+            "type": "string",
+            "description": "For action=addressed: what was changed. Concrete."
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "For action=contested/deferred: why. Required for those actions."
+          },
+          "files": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Files changed (for addressed)."
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "action": { "const": "addressed" } } },
+            "then": { "required": ["change"] }
+          },
+          {
+            "if": { "properties": { "action": { "enum": ["contested", "deferred"] } } },
+            "then": { "required": ["reasoning"] }
+          }
+        ]
+      }
+    }
+  }
+}

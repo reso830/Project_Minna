@@ -31,6 +31,12 @@ rather than restating it.
    do not depend on it. (M0: 62/65 findings were `blocker`.)
 7. **Independent reviewers' findings are not deduped.** Disagreement is signal.
 8. Strict on structure and enums; lenient on hints (store `line`, never gate on it).
+9. **The findings JSON is the single canonical review record.** Where a review step also
+   maintains a checklist (e.g. `checklists/plan-review.md` for the requirements gate), the
+   checklist is a PASS/FAIL **view** over its mandatory items, not a second ledger — every
+   failed/open checklist item must have a corresponding finding in the JSON, so the two
+   can never disagree. No review produces findings-shaped content in any format other than
+   this contract.
 
 ## Verdicts
 
@@ -64,6 +70,37 @@ rather than restating it.
 - **Producer** may only mark a finding `addressed`.
 - **Reviewer** is the only path to `verified` / `superseded`.
 - **Human** is the only path to `waived`.
+
+**The producer never writes in the reviewer's findings file.** The producer responds in
+a separate response file that references findings by `id` (see below). This preserves the
+maker/checker boundary: producer files and reviewer files are distinct artifacts that
+reference each other, never the same file edited by both.
+
+## Producer response (separate file, schema: `findings-response.schema.json`)
+
+After a review, the producer responds in `reviews/r<n>-<lens>-response.json` — one per
+review it is responding to (`arch`, `engr`). It references the reviewer's findings by
+`id`; it does NOT edit the reviewer's file. Shape:
+
+```json
+{
+  "schema_version": 1,
+  "responds_to": "r1-arch-review.json",
+  "responses": [
+    { "id": 1, "action": "addressed", "change": "status is now a required createFeature param; removed the 'specify' literal", "files": ["data-model.md", "contracts/api.md"] },
+    { "id": 5, "action": "contested", "reasoning": "Actor union is intentional per Const. XVI; documented rather than changed" },
+    { "id": 6, "action": "deferred", "reasoning": "operator marked Accepted / out-of-scope" }
+  ]
+}
+```
+
+- `action`: `addressed | contested | deferred`. The producer never uses `verified`,
+  `superseded`, or `waived` — those are the reviewer's / human's on re-review.
+- Every finding in the review being responded to must appear once in `responses`.
+- On re-review, the reviewer reads: the current artifact, its own prior findings file, and
+  this response file — then writes `r<n+1>-<lens>-review.json` dispositioning each prior
+  finding (`verified`/`still_open`/`superseded`). A `contested` finding the reviewer
+  agrees with becomes `superseded`; one it disagrees with stays `still_open`.
 
 ## Canonical JSON shape
 

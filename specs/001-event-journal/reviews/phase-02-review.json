@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "verdict": "approve",
+  "prior_findings": [],
+  "new_findings": [
+    {
+      "severity": "minor",
+      "class": "out_of_scope",
+      "verification": "checked",
+      "file": "package.json",
+      "line": 9,
+      "summary": "package.json gained a new `clean` script and a `build` script change (`npm run clean && tsc ...`) that no Phase 02 task (T005-T007) or the plan's Affected Areas authorized.",
+      "evidence": "`git diff -- package.json` shows two changes since the base commit: the already-expected `engines.node` bump to `>=22.11.0` (covered by plan.md's Affected Areas), and a new, previously-absent `\"clean\": \"node -e \\\"require('fs').rmSync('dist', ...)\\\"\"` script plus `\"build\": \"npm run clean && tsc -p tsconfig.json\"` (previously just `tsc -p tsconfig.json`). Neither T005, T006, T007, nor plan.md's Affected Areas mention `package.json` scripts. The change appears to be a legitimate fix (without it, stale compiled files in `dist/` from since-deleted source tests would linger and still run), but it wasn't a declared task target.",
+      "recommendation": "No action needed for this phase's approval — the change is small and beneficial — but note it in the phase's completion record so `package.json` script changes are traceable to a decision rather than appearing silently. If a future phase's tasks.md is updated to explicitly cover build-script hygiene, this can be retro-attributed there."
+    },
+    {
+      "severity": "nit",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "src/core/db.ts",
+      "line": 158,
+      "summary": "The `ROLLBACK TRANSACTION` recovery in `writeEvent`'s catch block swallows any error unconditionally, not just the specific 'no transaction is active' case it's commented as handling.",
+      "evidence": "src/core/db.ts:156-162: `catch (error) { try { db.exec(\"ROLLBACK TRANSACTION\"); } catch { /* A database-level ROLLBACK trigger may have already closed the transaction. */ } throw error; }` — the inner `catch {}` has no check on the caught error's message/type, so it would silently swallow a genuinely unexpected secondary failure the same way it swallows the expected 'no transaction' case.",
+      "recommendation": "Optional: narrow the inner catch to only ignore errors matching the expected 'no transaction is active' SQLite message, or at least log unexpected ones, so a future, different rollback failure isn't silently discarded. Not blocking — the outer `throw error` still surfaces the original failure either way."
+    }
+  ]
+}

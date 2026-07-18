@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "out_of_scope",
+      "verification": "checked",
+      "file": "src/core/project-registry.test.ts",
+      "line": 9,
+      "summary": "`npm run test` currently fails: `loadProjects rejects duplicate project keys before loading` throws a raw `YAMLParseError` instead of a duplicate-key error, so the tree is not green. This test and the code it exercises belong to the sibling `001-project-registry` feature, not to any Phase 01 task of `001-event-journal` (T001-T004).",
+      "evidence": "Ran `npm run test`: 13/14 tests pass; the sole failure is `dist/core/project-registry.test.js:9` — `AssertionError: The input did not match the regular expression /duplicate/i. Input: 'YAMLParseError: Map keys must be unique at line 5, column 3...'`. Both Phase 01 tests pass cleanly: `src/core/db.test.ts`'s `initializes journal tables and append-only triggers in a scratch database` and `src/cli.test.ts`'s `initializes the journal before handling a CLI command`. `npx tsc --noEmit` reports zero errors. `git status` shows this phase's diff is limited to `src/core/types.ts` (T001), `src/core/db.ts` (T002, new), `src/core/db.test.ts` (T003, new), and `src/cli.ts` (T004) plus the new `src/cli.test.ts` — none of which touch `src/core/project-registry.ts` or its test.",
+      "recommendation": "Track and fix this in the `001-project-registry` feature (its `loadProjects` should surface a message matching /duplicate/i, or the test's expectation should match the actual YAML-parser error). Do not route this back to the `001-event-journal` Phase 01 producer — it did not introduce or touch this code. Per the conformance-check instruction to treat any test failure as blocking a fully green tree, this is flagged now so the operator is aware before advancing, but it is not a Phase 01 defect."
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "spec.md:81-86's Non-goals now name the MCP tools (`start_feature`, `record_decision`, `record_manual_test`) alongside the CLI commands as disabled. plan.md:8 and plan.md's Affected Areas (line 127) list `src/server/tools.ts` and `src/server/mcp.ts` as files to modify. tasks.md T013 (lines 119-127) now has four explicit sub-steps: disable the CLI wrapper, update `printHelp()`, throw in `handleToolCall` for the three tool names, and remove them from the advertised tools list in `mcp.ts`. T014 step 10 adds a smoke-test script asserting `handleToolCall('start_feature')` throws. This closes the gap: even if a client called an unadvertised tool name directly, `handleToolCall`'s own throw (step 3) still blocks it — defense in depth, not just list-hiding."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "plan.md:32-33 no longer mentions `src/core/state.ts` in the business-logic-placement compliance line; it now reads 'All SQL execution, transaction management, and fold/verify logic live in `src/core/db.ts`. The CLI and MCP serve-mcp handlers only parse inputs and format outputs.' Consistent with the rest of the plan."
+    },
+    {
+      "id": 3,
+      "disposition": "verified",
+      "note": "tasks.md T013 item 2 (line 123) now explicitly instructs updating `printHelp()` to mark `start-feature`, `record-decision`, and `record-manual-test` as `[DISABLED in M1]`."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/plan.md",
+      "line": 84,
+      "summary": "The Write Flow architecture diagram still shows `createFeature`/`updateFeatureStatus` living in `src/core/state.ts`, contradicting the fix just made two lines above it (plan.md:33) and tasks.md T007, both of which place these functions in `src/core/db.ts`.",
+      "evidence": "plan.md:82-86 diagram: `[CLI / API Call] -> [src/core/state.ts: createFeature / updateFeatureStatus] -> [src/core/db.ts: recordEvent]`. But plan.md:33 (the fix for my prior finding 2) states all such logic lives in `src/core/db.ts`, and tasks.md:78-83 (T007) implements `createFeature`/`updateFeatureStatus` directly in `src/core/db.ts`, not `state.ts`. The diagram is the one remaining reference still describing the old (pre-fix) architecture.",
+      "recommendation": "Update the diagram's second line to `[src/core/db.ts: createFeature / updateFeatureStatus]` (or collapse it into the `recordEvent` box), removing the `state.ts` reference to match plan.md:33 and T007."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 149,
+      "summary": "The smoke test (T014) only exercises the `start-feature`/`start_feature` disabling on both CLI and MCP surfaces; it never exercises `record-decision`/`record_manual_test` on either surface, even though T013 disables all three on both surfaces.",
+      "evidence": "tasks.md:148 (T014 step 9) runs `npm run dev start-feature ...` and checks for the disabled error. tasks.md:149-150 (T014 step 10) checks only `handleToolCall('start_feature')`. Nothing in T014 calls `record-decision`/`record-manual-test` (CLI) or `handleToolCall('record_decision'|'record_manual_test')` (MCP), even though T013 disables all three identically on both surfaces.",
+      "recommendation": "Add smoke-test steps (or fold into steps 9-10) exercising `record-decision`/`record-manual-test` on both the CLI and MCP surfaces, so the smoke test actually covers everything T013 disables."
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The current spec, plan, and T013 now consistently require the legacy CLI mutation commands to fail closed before invoking state.ts, and T014 includes a smoke assertion for start-feature."
+    },
+    {
+      "id": 9,
+      "disposition": "verified",
+      "note": "The current spec, plan, data model, and T005/T009 continue to require exactly one feature.created event per projection row and fail closed on duplicate creation."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "src/server/tools.ts",
+      "line": 7,
+      "summary": "Disabling only CLI commands leaves the MCP server able to mutate the JSON-backed state, so agents retain a state-mutating authority and a second authoritative state path.",
+      "evidence": "src/server/mcp.ts publishes start_feature, record_decision, and record_manual_test tools. src/server/tools.ts routes those tools directly to startFeature, recordDecision, and recordManualTest from core/state.ts, which writes state/features.json. T013 modifies only src/cli.ts and does not disable or remove these MCP tools. Constitution XIII prohibits agents from receiving a state-mutating tool, and Constitution V/roadmap defer MCP while the journal is the authoritative state mechanism.",
+      "recommendation": "Disable or remove the MCP server's state-mutating tools in this feature (and ensure serve-mcp cannot expose another JSON-writing path), or migrate their mutations to the journal in the same transaction; add a test proving the tools fail closed."
+    },
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/quickstart.md",
+      "line": 60,
+      "summary": "The quickstart's createFeature example omits the required initial status argument, so the documented library API call does not match the contract.",
+      "evidence": "contracts/api.md declares createFeature(actor, id, title, status) with status required. quickstart.md calls createFeature with only actor, id, and title. The specification likewise requires caller-supplied status with no default.",
+      "recommendation": "Add an explicit generic status argument to the quickstart example and ensure its explanation does not imply a workflow-phase default."
+    }
+  ]
+}

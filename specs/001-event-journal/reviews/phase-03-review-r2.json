@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "verdict": "approve",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "db.test.ts gained two new tests: 'verifyDb reports an orphaned projection row' (inserts a features row via raw SQL with no creating event, asserts verifyDb reports it and names the row) and 'verifyDb reports duplicate feature creation events' (creates a feature normally, then raw-SQL-inserts a second feature.created event for the same id, asserts verifyDb reports 'more than one feature.created'). I traced both against verifyDb's actual fold logic (db.ts:255-323) and the assertions match the real discrepancy messages the code produces. AC5 is now genuinely covered, not just field-drift (AC4)."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "mcp.ts was refactored: the tools array is now an exported `advertisedTools` constant, and server startup moved into an exported `startMcpServer()` function gated behind an `import.meta.url` main-module check, so importing the module for testing no longer opens a real stdio connection. The new src/server/mcp.test.ts imports `advertisedTools` directly and asserts it deep-equals `[\"status\"]` and excludes all three legacy tool names. cli.ts's `serve-mcp` case was correctly updated to call the now-exported `startMcpServer()`. Ran the suite: this new test passes alongside everything else."
+    },
+    {
+      "id": 3,
+      "disposition": "verified",
+      "note": "exportCommand was rewritten to filter the `--feature`/<id> pair out of args by index (wherever they appear) and require exactly one non-flag argument remaining as the target directory, rather than a fixed offset from `--feature`. A new cli.test.ts test, 'exports when the target directory precedes the feature flag', runs `export <dir> --feature <id>` (the reversed order my nit named) and confirms it now succeeds. This is a more general fix than what I suggested, not just a special-case patch."
+    }
+  ],
+  "new_findings": []
+}

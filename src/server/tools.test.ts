@@ -1,26 +1,12 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { handleToolCall } from "./tools.js";
 
-test("MCP start_feature validates the project before creating state", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "minna-mcp-"));
-  const originalCwd = process.cwd();
-
-  try {
-    process.chdir(dir);
-
+test("MCP legacy state-mutating tools fail closed", async () => {
+  for (const tool of ["start_feature", "record_decision", "record_manual_test"]) {
     await assert.rejects(
-      handleToolCall("start_feature", {
-        project: "missing",
-        title: "Decision log"
-      }),
-      /Unknown project|ENOENT/
+      handleToolCall(tool, {}),
+      /Tool disabled in M1\./,
     );
-  } finally {
-    process.chdir(originalCwd);
-    await rm(dir, { recursive: true, force: true });
   }
 });

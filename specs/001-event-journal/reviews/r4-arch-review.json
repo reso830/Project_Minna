@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "data-model.md:23-33 now uses `RAISE(ROLLBACK, ...)` for both the update and delete triggers. I re-ran the exact scenario from my original finding against `node:sqlite` with the current DDL: `BEGIN`, tamper `features`, then a blocked `events` tamper, then `COMMIT`. Result: the transaction throws immediately, `db.isTransaction` is `false` right after the error (the whole transaction is gone), and the `features` row is untouched (`status` still `'ok'`). plan.md:8/156 and tasks.md T002/T005 describe the same fix. Fully resolved."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "plan.md:14 now states `node:sqlite` 'is currently flagged as experimental by Node.js and prints an ExperimentalWarning on execution, which is an accepted risk for M1 per Constitution VI.' This directly matches the recommendation — the claim is now accurate and the risk is disclosed rather than glossed over."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 119,
+      "summary": "T013 only disables the legacy state-mutating commands in `src/cli.ts`; the MCP server exposes the exact same mutations (`start_feature`, `record_decision`, `record_manual_test`) through a completely separate code path that the task never touches, so `state/features.json` is not actually made read-only.",
+      "evidence": "`src/server/tools.ts:1-23`'s `handleToolCall` calls `startFeature`/`recordDecision`/`recordManualTest` from `src/core/state.ts` directly, independent of `src/cli.ts`. `src/server/mcp.ts:21-70` registers `start_feature`, `record_decision`, and `record_manual_test` as live MCP tools and wires them to `handleToolCall` (line 74), reachable via the already-existing `serve-mcp` CLI command / `npm run serve:mcp` script. tasks.md:119-123 (T013) only instructs modifying `startFeatureCommand`, `recordDecisionCommand`, and `recordManualTestCommand` in `src/cli.ts` — it does not mention `src/server/tools.ts` or `src/server/mcp.ts` at all. spec.md:81-85's Non-goals claims 'The legacy state file `state/features.json` is treated as a read-only deprecated archive' — this is not true as planned: an MCP client can still call `start_feature`/`record_decision`/`record_manual_test` and write to it. The smoke test (tasks.md:144, T014 step 9) only exercises the CLI path, so this gap would not be caught even if the smoke test passes.",
+      "recommendation": "Extend T013 (or add a task) to also disable/remove `start_feature`, `record_decision`, and `record_manual_test` from the MCP tool surface (`src/server/tools.ts` and the tool list in `src/server/mcp.ts`), and add a smoke-test step exercising the MCP path the same way T014 step 9 exercises the CLI path — otherwise `state/features.json` remains mutable through a live, already-wired interface."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/plan.md",
+      "line": 33,
+      "summary": "The Constitution IV compliance line still claims business/fold/verify logic 'live in `src/core/db.ts` and `src/core/state.ts`,' contradicting the plan's own Areas Explicitly Out of Scope statement (line 133) that `src/core/state.ts` 'remains completely untouched.'",
+      "evidence": "plan.md:33: 'All SQL execution, transaction management, and fold/verify logic live in `src/core/db.ts` and `src/core/state.ts`.' plan.md:133: '`src/core/state.ts` (Legacy state management file remains completely untouched...).' Both statements are in the same document; only one can be true given the current design (all new logic is in `db.ts`).",
+      "recommendation": "Drop 'and `src/core/state.ts`' from the Principle IV compliance line — it's stale text from before the M1/M2 scope split."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 119,
+      "summary": "T013 disables the legacy commands' execution but doesn't update `src/cli.ts`'s `printHelp()`, which will keep advertising `start-feature`, `record-decision`, and `record-manual-test` as if they work normally.",
+      "evidence": "The current `printHelp()` (`src/cli.ts:88-97`) lists `start-feature`, `record-decision`, and `record-manual-test` in the commands list with their normal usage strings and no indication they're disabled. tasks.md:119-123 (T013) only mentions modifying the three command-handler functions, not `printHelp()`.",
+      "recommendation": "Add a note to T013 (or a follow-up bullet) to update `printHelp()`'s listing for these three commands to reflect that they're disabled in M1."
+    }
+  ]
+}

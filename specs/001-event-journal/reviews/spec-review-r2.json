@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "data-model.md's `feature.created` payload now requires `status` (lines 47-53), the fold algorithm sets `status: payload.status` with no fallback (lines 96-104), `contracts/api.md:55`'s `createFeature` signature makes `status` a required 4th parameter, and spec.md's Scope/Behavior/Data Considerations sections (lines 58, 132, 257) all state status is required, caller-supplied, no journal-side default. The forced 'specify' constant is gone from the actual contract and fold logic. A leftover stale comment on data-model.md:31 still says 'default: specify' — raised separately as new finding F, but the substantive violation is fixed."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "tasks.md no longer contains the old T010 (the ambiguous workflow.ts rename); plan.md:138 now explicitly lists `src/core/workflow.ts` and `workflows/speckit-feature.yaml` under 'Areas Explicitly Out of Scope... deferred to M2', and plan.md:76 states the chosen compatibility approach (map status back to phase in state.ts's reading path). The finding asked for an explicit decision instead of an implicit rename — that decision is now documented. Whether the chosen compatibility mechanism actually works is a new, separate problem — raised as new finding B."
+    },
+    {
+      "id": 3,
+      "disposition": "verified",
+      "note": "package.json:8 now declares `\"node\": \">=22.11.0\"`, and plan.md:14 states the matching rationale ('requires engines.node >=22.11.0 for stable node:sqlite support'). The artifact is now internally consistent; I have no way to independently re-verify the external fact of exactly which Node version stabilized `node:sqlite` from within this repo, but that was true of the original finding too and is no longer a gap in the artifact itself."
+    },
+    {
+      "id": 4,
+      "disposition": "verified",
+      "note": "quickstart.md:10-16 and tasks.md:148-149 (T016 step 5) both now use `node -e \"...require('node:sqlite')...\"` one-liners instead of the external `sqlite3` CLI binary. No remaining reference to the external client for inspection or the smoke test."
+    },
+    {
+      "id": 5,
+      "disposition": "verified",
+      "note": "contracts/api.md:3 now types `Actor` as `\"human\" | \"system\" | (string & {})`, the standard pattern that prevents TypeScript from widening the union to plain `string` while still accepting arbitrary agent-id strings. This is a correct, idiomatic fix. The same edit left the file's markdown structure broken (dangling code fence) — raised separately as new finding C, unrelated to the type-correctness substance of this finding."
+    },
+    {
+      "id": 6,
+      "disposition": "verified",
+      "note": "contracts/api.md:1, plan.md:49, and tasks.md:34 (T001) all now state explicitly that `contracts/api.md` is documentation-only and `src/core/types.ts` is the sole source of truth for runtime types. The ambiguity is resolved."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 85,
+      "summary": "Making `status` a required, no-default parameter (the fix for finding 1) leaves the existing `minna start-feature` command with no way to supply it, and no task specifies how this gap is closed — the required smoke test (T016) calls `start-feature` with no `--status` flag and expects it to succeed.",
+      "evidence": "`src/cli.ts:45-57`'s `startFeatureCommand` reads only `--project`/`--title`. `src/core/state.ts:35-52`'s current `startFeature(project, title)` takes no status argument. `contracts/api.md:55`'s `createFeature(actor, id, title, status, options?)` now requires `status` with no default. `contracts/cli.md` documents only `log`/`verify`/`export`, no `--status` flag for `start-feature`. `tasks.md:85-89` (T008) says only to 'delegate to db.ts' and 'map status from projection back to the legacy phase field,' without stating what value `startFeature` will pass as the now-mandatory `status`. Yet `tasks.md:145` (T016 step 2) runs `npm run dev start-feature --project test --title \"smoke-validation\"` with no `--status` flag and expects a working feature to result. Separately, `plan.md:76`'s read-path mapping ('map database status to legacy phase') cannot type-check as stated either: `types.ts:3-11`'s `PhaseId` is a closed 8-value union and `FeatureState.phase` is typed `PhaseId`, while the journal's `status` is an unconstrained string per spec.md's own design (no enum) — assigning an arbitrary caller status into `phase` either fails to compile, requires an unstated cast, or throws at runtime in `workflow.ts:6-8` (`getCurrentPhase` throws on any value not present in `workflow.phases`).",
+      "recommendation": "Specify, in tasks.md and contracts/cli.md, exactly what status value `start-feature` supplies to `createFeature` (a new `--status` flag, or a stated default chosen at the CLI/state.ts layer, explicitly documented as such rather than silently hardcoded) and how `state.ts`'s read-path mapping turns an arbitrary `status` string into a valid `PhaseId` for `workflow.ts` (e.g. treat any unrecognized status as a specific fallback phase, and say so in the plan)."
+    },
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/checklists/plan-review.md",
+      "line": 7,
+      "summary": "The plan-review gate checklist itself still reads FAIL and still shows CHK001 and CHK009 unchecked, despite the producer's response report claiming both are addressed.",
+      "evidence": "checklists/plan-review.md:7 states `**Gate result**: FAIL — open: CHK001, CHK009 (2026-07-16)`, and lines 11 and 25 still show `- [ ] **CHK001**` and `- [ ] **CHK009**` (unchecked), not `- [x]`. The producer's response report items 7-8 claim both are 'Status: addressed.' By this checklist's own stated purpose ('Verification gate to check the plan and design artifacts... before any implementation code is written'), the artifact currently under review still formally reports a failed gate.",
+      "recommendation": "Update checklists/plan-review.md to check off CHK001/CHK009 and correct the Gate result line once the corresponding fixes are independently confirmed (this is the Codex/requirements re-review's item to verify, but the file should not be left self-contradictory in the meantime)."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/contracts/api.md",
+      "line": 1,
+      "summary": "contracts/api.md lost its title, intro, and '## 1. Type Definitions' header plus the opening ` ```typescript ` fence when the source-of-truth note was added, but the original closing ``` ``` ``` fence (now line 24) was left in place with no matching opening fence.",
+      "evidence": "api.md:1 now opens directly with a `// Note: ...` comment followed immediately by TypeScript code (lines 3-23), with a lone ` ``` ` at line 24 and no ` ```typescript ` (or any) opening fence anywhere above it. Markdown renderers will not treat lines 1-23 as a code block, and the stray closing fence will corrupt rendering of whatever follows.",
+      "recommendation": "Restore an opening ` ```typescript ` fence before the type definitions (with or without restoring the removed header/title), so the closing fence at line 24 has a matching pair."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/contracts/api.md",
+      "line": 5,
+      "summary": "`WriteOptions.faultInjection` is exposed as a plain optional parameter on every production write function (`recordEvent`, `createFeature`, `updateFeatureStatus`), not as a test-only seam, so any caller can pass `{ faultInjection: true }` to deliberately defeat the same-transaction guarantee Constitution III relies on.",
+      "evidence": "api.md:5-7 defines `WriteOptions { faultInjection?: boolean }`, and this same type is the `options` parameter on `recordEvent` (api.md:40), `createFeature` (api.md:55), and `updateFeatureStatus` (api.md:67) — the actual production write API, with no stated restriction to test builds or a separate test-only entry point.",
+      "recommendation": "Move the fault-injection hook out of the public production API surface (e.g. dependency-inject a transaction runner that tests can substitute, or expose a separate `_test`-prefixed export) so no production call site can pass a flag that intentionally corrupts a transaction."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 22,
+      "summary": "The Phase Summary Table's Phase 03 row still reads 'T011 - T015,' left over from before the old T010 (workflow.ts task) was deleted and subsequent tasks renumbered; the actual Phase 03 section now spans T010-T015.",
+      "evidence": "tasks.md:22 reads `| 03 | CLI Commands Implementation | T011 - T015 | ... |`, but the `## Phase 03: CLI Commands Implementation` section (tasks.md:98-133) now starts at T010 (`minna log`) through T015 (remove deprecated commands) — six tasks, not five starting at T011.",
+      "recommendation": "Update the table row to 'T010 - T015'."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/data-model.md",
+      "line": 31,
+      "summary": "The `features` table DDL comment still says the `status` column has a 'default: specify,' contradicting the payload contract and fold logic three sections below it in the same document, which now require `status` as caller-supplied with no default.",
+      "evidence": "data-model.md:31: `status TEXT NOT NULL,             -- Current generic status string (default: 'specify')`. No `DEFAULT` clause actually exists in the SQL, and data-model.md:52, 60, and 101 all now show `status` as a required, caller-supplied field with no fallback — the comment is stale and self-contradictory within the same file.",
+      "recommendation": "Remove '(default: 'specify')' from the DDL comment, or replace it with 'required, caller-supplied, no default' to match the rest of the document."
+    }
+  ]
+}

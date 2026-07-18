@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "still_open",
+      "note": "CHK001 remains open: tasks.md T009 still requires recordDecision and recordManualTest to emit events and mutate the projection, although decisions and manual tests are deferred to M2 and the spec permits exactly two event types."
+    },
+    {
+      "id": 9,
+      "disposition": "verified",
+      "note": "The current spec, data model, plan, and T005/T011 now require exactly one feature.created event per projection row, and duplicate creation is fail-closed."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/data-model.md",
+      "line": 10,
+      "summary": "The proposed events schema does not enforce its constitutional append-only requirement, despite T005 requiring direct UPDATE and DELETE attempts to fail.",
+      "evidence": "data-model.md defines only CREATE TABLE IF NOT EXISTS events with ordinary columns and no protecting trigger or other database mechanism. tasks.md T005 requires attempted UPDATE and DELETE queries against events to throw or fail, but T006 specifies only the transaction wrapper and does not implement such protection. SQLite permits UPDATE and DELETE on an ordinary table, so the stated test cannot pass from the documented design.",
+      "recommendation": "Specify and task a SQLite-level append-only enforcement mechanism (for example, aborting UPDATE/DELETE triggers), then test the direct SQL mutation attempts required by T005."
+    },
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/001-event-journal/tasks.md",
+      "line": 87,
+      "summary": "The package requires a caller-supplied initial status with no default but provides no compatible value source for the retained start-feature command or its smoke test.",
+      "evidence": "spec.md and contracts/api.md require createFeature(..., status, ...) with a caller-supplied status and no default. tasks.md T008 retains startFeature/listFeatures and only says to map projection status back to legacy phase; T016 invokes start-feature with only --project and --title. The current cli.ts startFeatureCommand and quickstart.md's createFeature example likewise provide no status argument. Current src/core/state.ts hardcodes phase: 'specify', which cannot be silently carried forward under the no-default requirement.",
+      "recommendation": "Either define a required status input for the retained start-feature path and update its smoke/quickstart examples, or remove that compatibility path from this feature; do not introduce an implicit legacy status."
+    }
+  ]
+}

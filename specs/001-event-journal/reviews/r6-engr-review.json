@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "verdict": "approve",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The package keeps the legacy CLI and MCP mutation paths disabled in M1, and T013/T014 now cover all three commands and all three MCP tools."
+    },
+    {
+      "id": 9,
+      "disposition": "verified",
+      "note": "The exact-one-creator invariant remains consistently specified and tested across the current package."
+    }
+  ],
+  "new_findings": []
+}

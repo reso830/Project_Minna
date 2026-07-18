@@ -1,5 +1,23 @@
 export type AgentRole = "operator" | "claude" | "codex";
 
+export type Actor = "human" | "system" | (string & {});
+
+export interface EventEnvelope<TPayload = unknown> {
+  id?: number;
+  timestamp: string;
+  actor: Actor;
+  type: string;
+  payload: TPayload;
+}
+
+export interface FeatureProjection {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type PhaseId =
   | "specify"
   | "clarify"
