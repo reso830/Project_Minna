@@ -1,6 +1,7 @@
 "use client";
 
 import { mockAgentLogs, mockDiffs, mockPlanMarkdown } from "../core/mockData";
+import { ChevronIcon } from "./icons";
 import { useWorkspace } from "./WorkspaceProvider";
 
 const tabs = [
@@ -9,34 +10,43 @@ const tabs = [
   { id: "diff", label: "DIFF" },
 ] as const;
 
+const agentDefinitions = [
+  { number: 1, idleMessage: "" },
+  { number: 2, idleMessage: "waiting for agent-1..." },
+  { number: 3, idleMessage: "not yet assigned" },
+];
+
 function AgentView({ featureId, state }: { featureId: string; state: string }) {
   const { expandedAgents, toggleAgent } = useWorkspace();
-  const agentId = `${featureId}-agent-1`;
-  const expanded = expandedAgents[agentId] ?? false;
-  const logs = mockAgentLogs[featureId] ?? [];
-  const status = state === "active" ? "working" : "idle";
-
-  if (logs.length === 0) {
-    return <p className="detail-empty">No agent log available.</p>;
-  }
 
   return (
-    <section className="agent-pane">
-      <button
-        aria-expanded={expanded}
-        className="agent-pane-toggle"
-        onClick={() => toggleAgent(agentId)}
-        type="button"
-      >
-        <span aria-hidden="true">{expanded ? "⌄" : "›"}</span>
-        <span>agent-1 · <strong className={`agent-status agent-status--${status}`}>{status}</strong></span>
-      </button>
-      {expanded && (
-        <pre className="agent-terminal">
-          {logs.map((line, index) => <code className={line.startsWith("$") ? "terminal-command" : "terminal-output"} key={`${agentId}-${index}`}>{line}</code>)}
-        </pre>
-      )}
-    </section>
+    <>
+      {agentDefinitions.map((agent) => {
+        const agentId = `${featureId}-agent-${agent.number}`;
+        const expanded = expandedAgents[agentId] ?? false;
+        const status = agent.number === 1 && state === "active" ? "working" : "idle";
+        const logs = agent.number === 1 ? mockAgentLogs[featureId] ?? [] : [agent.idleMessage];
+
+        return (
+          <section className={`agent-pane${expanded ? " agent-pane--expanded" : ""}`} key={agentId}>
+            <button
+              aria-expanded={expanded}
+              className="agent-pane-toggle"
+              onClick={() => toggleAgent(agentId)}
+              type="button"
+            >
+              <span aria-hidden="true"><ChevronIcon direction={expanded ? "down" : "right"} /></span>
+              <span>agent-{agent.number} · <strong className={`agent-status agent-status--${status}`}>{status}</strong></span>
+            </button>
+            {expanded && logs.length > 0 && (
+              <pre className="agent-terminal">
+                {logs.map((line, index) => <code className={line.startsWith("$") ? "terminal-command" : "terminal-output"} key={`${agentId}-${index}`}>{line}</code>)}
+              </pre>
+            )}
+          </section>
+        );
+      })}
+    </>
   );
 }
 

@@ -45,7 +45,7 @@ describe("CenterPanel", () => {
     const timeline = screen.getByLabelText("Journal timeline");
     const events = within(timeline).getAllByRole("article");
     expect(events.at(-1)).toHaveTextContent("Ship the drawer update");
-    expect(within(events.at(-1)!).getByText(/^\d{2}:\d{2}$/)).toBeInTheDocument();
+    expect(within(events.at(-1)!).getByText(/· \d{4}$/)).toBeInTheDocument();
   });
 
   it("replaces a pending decision with its resolved choice", () => {
@@ -57,6 +57,21 @@ describe("CenterPanel", () => {
     expect(screen.getByText("✓ Approve changes")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Keep current policy" })).not.toBeInTheDocument();
     expect(screen.getByText("active")).toBeInTheDocument();
+  });
+
+  it("does not add a phase chip to the handoff journal header", () => {
+    renderPanel("checkout-redesign-001");
+    fireEvent.click(screen.getByRole("button", { name: "Select feature" }));
+
+    expect(screen.getByText("active")).toBeInTheDocument();
+    expect(screen.queryByText("implement")).not.toBeInTheDocument();
+  });
+
+  it("renders the domain agent as the handoff's agent-1 label", () => {
+    renderPanel("checkout-redesign-001");
+    fireEvent.click(screen.getByRole("button", { name: "Select feature" }));
+
+    expect(screen.getAllByText("agent-1").length).toBeGreaterThan(0);
   });
 
   it("does not submit whitespace-only composer input", () => {

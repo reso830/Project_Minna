@@ -186,7 +186,7 @@
 
 **Purpose**: Validate full user journeys inside the browser against the release state.
 
-- [ ] **T018** **End-to-End User Journeys Verification**
+- [x] **T018** **End-to-End User Journeys Verification**
   * **Target Component**: Whole UI surface
   * **Expected Behavior**: Spin up development client (`npm run dev`), launch browser window, and step through independent tests:
     1. Navigate projects list and verify panel swaps on feature select.

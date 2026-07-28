@@ -18,15 +18,21 @@ describe("Sidebar", () => {
   it("expands projects and selects a feature", () => {
     renderSidebar();
 
+    expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
     const project = screen.getByRole("button", { name: "Checkout Redesign" });
+    expect(project).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(project);
     expect(project).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(project);
     expect(project).toHaveAttribute("aria-expanded", "true");
 
     const feature = screen.getByRole("button", { name: /cart drawer refactor/i });
+    expect(feature).toHaveTextContent("001Cart drawer refactor");
     fireEvent.click(feature);
     expect(feature).toHaveAttribute("aria-pressed", "true");
+    expect(project).toHaveClass("sidebar-project-toggle--selected");
   });
 
   it("collapses and reopens agent usage independently", () => {
@@ -48,6 +54,8 @@ describe("Sidebar", () => {
     renderSidebar();
 
     const checkout = screen.getByRole("button", { name: "Checkout Redesign" });
+    fireEvent.click(checkout);
+
     expect(checkout).toHaveClass("sidebar-project-toggle--blocked");
     fireEvent.click(checkout);
 

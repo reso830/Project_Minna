@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 
 import HomePage from "../../app/page";
 import { WorkspaceProvider, useWorkspace } from "../WorkspaceProvider";
@@ -49,13 +49,13 @@ test("restores independently expanded agent panes", async () => {
   const firstMount = renderHook(() => useWorkspace(), { wrapper });
 
   act(() => {
-    firstMount.result.current.toggleAgent("checkout-redesign-001-agent-1");
+    firstMount.result.current.toggleAgent("checkout-redesign-001-agent-2");
   });
 
   firstMount.unmount();
   const reloadedMount = renderHook(() => useWorkspace(), { wrapper });
   await waitFor(() =>
-    expect(reloadedMount.result.current.expandedAgents["checkout-redesign-001-agent-1"]).toBe(true),
+    expect(reloadedMount.result.current.expandedAgents["checkout-redesign-001-agent-2"]).toBe(true),
   );
 });
 
@@ -65,4 +65,20 @@ test("renders the three workspace regions", () => {
   expect(screen.getByLabelText("Sidebar")).toBeInTheDocument();
   expect(screen.getByLabelText("Journal")).toBeInTheDocument();
   expect(screen.getByLabelText("Details")).toBeInTheDocument();
+});
+
+test("opens the prototype's default feature and project on a fresh session", async () => {
+  const mountedWorkspace = renderHook(() => useWorkspace(), { wrapper });
+
+  await waitFor(() => {
+    expect(mountedWorkspace.result.current.activeFeatureId).toBe("checkout-redesign-001");
+    expect(mountedWorkspace.result.current.expandedProjects["Checkout Redesign"]).toBe(true);
+  });
+});
+
+test("switches between the prototype's journal and board views", () => {
+  render(<HomePage />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Switch workspace view" }));
+  expect(screen.getByRole("heading", { name: /kanban board/i })).toBeInTheDocument();
 });

@@ -6,10 +6,12 @@ import { mockEvents, mockFeatures } from "../core/mockData";
 import type { WorkItem, WorkItemEvent } from "../core/types";
 
 type RightTab = "agents" | "md" | "diff";
+type WorkspaceView = "journal" | "board" | "blank";
 
 interface WorkspaceContextValue {
   activeFeatureId: string | null;
   activeRightTab: RightTab;
+  activeView: WorkspaceView;
   expandedProjects: Record<string, boolean>;
   expandedAgents: Record<string, boolean>;
   features: WorkItem[];
@@ -17,6 +19,8 @@ interface WorkspaceContextValue {
   resolvedDecisions: Record<string, Record<string, string>>;
   selectFeature: (featureId: string) => void;
   setRightTab: (tab: RightTab) => void;
+  toggleWorkspaceView: () => void;
+  toggleBlankPreview: () => void;
   toggleProject: (projectName: string) => void;
   toggleAgent: (agentId: string) => void;
   submitReply: (featureId: string, text: string) => void;
@@ -24,6 +28,10 @@ interface WorkspaceContextValue {
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
+const defaultFeatureId = mockFeatures[0]?.id ?? null;
+const defaultProjectName = mockFeatures[0]?.project;
+const defaultExpandedProjects = defaultProjectName ? { [defaultProjectName]: true } : {};
+const defaultExpandedAgents = defaultFeatureId ? { [`${defaultFeatureId}-agent-1`]: true } : {};
 
 const cloneEvents = (): Record<string, WorkItemEvent[]> =>
   Object.fromEntries(Object.entries(mockEvents).map(([featureId, events]) => [featureId, [...events]]));
@@ -38,10 +46,11 @@ const readJson = <T,>(key: string, fallback: T): T => {
 };
 
 export function WorkspaceProvider({ children }: PropsWithChildren) {
-  const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
+  const [activeFeatureId, setActiveFeatureId] = useState<string | null>(defaultFeatureId);
   const [activeRightTab, setActiveRightTab] = useState<RightTab>("agents");
-  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
-  const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>({});
+  const [activeView, setActiveView] = useState<WorkspaceView>("journal");
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>(defaultExpandedProjects);
+  const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>(defaultExpandedAgents);
   const [features, setFeatures] = useState<WorkItem[]>(() => [...mockFeatures]);
   const [events, setEvents] = useState<Record<string, WorkItemEvent[]>>(cloneEvents);
   const [resolvedDecisions, setResolvedDecisions] = useState<Record<string, Record<string, string>>>({});
@@ -60,19 +69,17 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     const projectState = Object.fromEntries(
       [...new Set(mockFeatures.map((feature) => feature.project))].map((project) => [
         project,
-        readJson(`minna_project_expanded_${project}`, false),
+        readJson(`minna_project_expanded_${project}`, project === defaultProjectName),
       ]),
     );
     setExpandedProjects(projectState);
 
-    const agentState = Object.fromEntries(
-      Array.from({ length: window.sessionStorage.length }, (_, index) => window.sessionStorage.key(index))
-        .filter((key): key is string => key?.startsWith("minna_agent_expanded_") ?? false)
-        .map((key) => [
-          key.slice("minna_agent_expanded_".length),
-          readJson(key, false),
-        ]),
-    );
+    const agentState: Record<string, boolean> = { ...defaultExpandedAgents };
+    for (const key of Array.from({ length: window.sessionStorage.length }, (_, index) => window.sessionStorage.key(index))) {
+      if (key?.startsWith("minna_agent_expanded_")) {
+        agentState[key.slice("minna_agent_expanded_".length)] = readJson(key, false);
+      }
+    }
     setExpandedAgents(agentState);
 
     const replyEvents = cloneEvents();
@@ -98,6 +105,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const value = useMemo<WorkspaceContextValue>(() => ({
     activeFeatureId,
     activeRightTab,
+    activeView,
     expandedProjects,
     expandedAgents,
     features,
@@ -105,11 +113,18 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     resolvedDecisions,
     selectFeature: (featureId) => {
       setActiveFeatureId(featureId);
+      setActiveView("journal");
       window.sessionStorage.setItem("minna_active_feature_id", featureId);
     },
     setRightTab: (tab) => {
       setActiveRightTab(tab);
       window.sessionStorage.setItem("minna_active_right_tab", tab);
+    },
+    toggleWorkspaceView: () => {
+      setActiveView((current) => current === "board" ? "journal" : "board");
+    },
+    toggleBlankPreview: () => {
+      setActiveView((current) => current === "blank" ? "journal" : "blank");
     },
     toggleProject: (projectName) => {
       setExpandedProjects((current) => {
@@ -169,7 +184,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       const replies = readJson<WorkItemEvent[]>(`minna_replies_${featureId}`, []);
       window.sessionStorage.setItem(`minna_replies_${featureId}`, JSON.stringify([...replies, confirmation]));
     },
-  }), [activeFeatureId, activeRightTab, events, expandedAgents, expandedProjects, features, resolvedDecisions]);
+  }), [activeFeatureId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, resolvedDecisions]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

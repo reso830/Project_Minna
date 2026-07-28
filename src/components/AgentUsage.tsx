@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import { ChevronIcon } from "./icons";
+
 const usage = [
-  { id: "claude", name: "Claude", color: "#f29f67", fiveHours: 78, sevenDays: 61 },
-  { id: "codex", name: "Codex", color: "#00c9d6", fiveHours: 52, sevenDays: 43 },
-  { id: "human", name: "Human", color: "#8f9a94", fiveHours: 24, sevenDays: 18 },
+  { id: "agent-1", color: "#e08a2e", fiveHours: 40, sevenDays: 72 },
+  { id: "agent-2", color: "#4a544d", fiveHours: 15, sevenDays: 48 },
+  { id: "agent-3", color: "#c0392b", fiveHours: 5, sevenDays: 30 },
 ];
 
 const storageKey = "minna_agent_usage_expanded";
@@ -34,16 +36,13 @@ export function AgentUsage() {
         type="button"
       >
         <span>Agent usage</span>
-        <span aria-hidden="true" className="sidebar-chevron">{expanded ? "⌄" : "›"}</span>
+        <span aria-hidden="true" className="sidebar-chevron"><ChevronIcon direction={expanded ? "down" : "right"} /></span>
       </button>
       {expanded && (
         <div className="agent-usage-list">
           {usage.map((agent) => (
             <div className="agent-usage-row" key={agent.id}>
-              <div className="agent-usage-name">
-                <span aria-hidden="true" className="agent-swatch" style={{ backgroundColor: agent.color }} />
-                {agent.name}
-              </div>
+              <span aria-label={`${agent.id} usage`} className="agent-swatch" style={{ backgroundColor: agent.color }} />
               <div className="agent-usage-meters">
                 <UsageMeter label="5h" value={agent.fiveHours} />
                 <UsageMeter label="7d" value={agent.sevenDays} />

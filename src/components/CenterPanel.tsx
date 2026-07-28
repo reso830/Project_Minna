@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { WorkItemEvent } from "../core/types";
+import { SendIcon } from "./icons";
 import { useWorkspace } from "./WorkspaceProvider";
 
 interface DecisionPrompt {
@@ -29,11 +30,7 @@ function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return "";
 
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
+  return `${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function featureNumber(id: string): string {
@@ -41,7 +38,14 @@ function featureNumber(id: string): string {
 }
 
 function avatarInitial(actor: string): string {
-  return actor === "minna" ? "M" : actor.slice(0, 1).toUpperCase();
+  if (actor === "minna") return "M";
+  if (actor === "claude") return "A1";
+  if (actor.startsWith("agent-")) return `A${actor.slice("agent-".length)}`;
+  return actor.slice(0, 1).toUpperCase();
+}
+
+function actorLabel(actor: string): string {
+  return actor === "claude" ? "agent-1" : actor;
 }
 
 export function CenterPanel() {
@@ -55,14 +59,19 @@ export function CenterPanel() {
   } = useWorkspace();
   const [reply, setReply] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
+  const previousTimeline = useRef({ featureId: null as string | null, length: 0 });
   const activeFeature = features.find((feature) => feature.id === activeFeatureId) ?? null;
   const timeline = activeFeature ? events[activeFeature.id] ?? [] : [];
 
   useEffect(() => {
     const timelineElement = timelineRef.current;
-    if (timelineElement) {
+    const previous = previousTimeline.current;
+    if (timelineElement && previous.featureId === activeFeatureId && timeline.length > previous.length) {
       timelineElement.scrollTop = timelineElement.scrollHeight;
+    } else if (timelineElement && previous.featureId !== activeFeatureId) {
+      timelineElement.scrollTop = 0;
     }
+    previousTimeline.current = { featureId: activeFeatureId, length: timeline.length };
   }, [activeFeatureId, timeline.length]);
 
   const sendReply = () => {
@@ -114,8 +123,8 @@ export function CenterPanel() {
                 </span>
                 <div className="journal-event-content">
                   <div className="journal-event-meta">
-                    <span>{event.actor}</span>
-                    <time dateTime={event.timestamp}>{formatTime(event.timestamp)}</time>
+                    <span>{actorLabel(event.actor)}</span>
+                    <time dateTime={event.timestamp}> · {formatTime(event.timestamp)}</time>
                   </div>
                   <div className="journal-bubble">{event.summary}</div>
                   {decision && (
@@ -153,12 +162,12 @@ export function CenterPanel() {
                 sendReply();
               }
             }}
-            placeholder="Write a reply..."
+            placeholder="Send reply"
             value={reply}
           />
-          <button aria-label="Send reply" className="journal-send-button" onClick={sendReply} type="button">↑</button>
+          <button aria-label="Send reply" className="journal-send-button" onClick={sendReply} type="button"><SendIcon /></button>
         </div>
-        <span className="journal-git-info">{activeFeature.branch ?? "No branch created"}</span>
+        <span className="journal-git-info">{activeFeature.branch ? `(a1c9e42) ${activeFeature.branch}` : "No branch created"}</span>
       </footer>
     </section>
   );

@@ -3,6 +3,7 @@
 import Image from "next/image";
 
 import { AgentUsage } from "./AgentUsage";
+import { ChevronIcon, PlusIcon, SettingsIcon, ViewToggleIcon } from "./icons";
 import { useWorkspace } from "./WorkspaceProvider";
 
 function featureNumber(id: string): string {
@@ -10,7 +11,14 @@ function featureNumber(id: string): string {
 }
 
 export function Sidebar() {
-  const { activeFeatureId, expandedProjects, features, selectFeature, toggleProject } = useWorkspace();
+  const {
+    activeFeatureId,
+    expandedProjects,
+    features,
+    selectFeature,
+    toggleProject,
+    toggleWorkspaceView,
+  } = useWorkspace();
   const projects = [...new Set(features.map((feature) => feature.project))];
 
   return (
@@ -20,12 +28,15 @@ export function Sidebar() {
           <Image alt="Minna" height={44} priority src="/assets/minna-mark.png" width={44} />
           <span>minna</span>
         </div>
-        <button aria-label="Workspace menu" className="sidebar-icon-button" type="button">•••</button>
+        <div className="sidebar-header-actions">
+          <button aria-label="Switch workspace view" className="sidebar-icon-button" onClick={toggleWorkspaceView} type="button"><ViewToggleIcon /></button>
+          <button aria-label="Settings" className="sidebar-icon-button sidebar-icon-button--settings" type="button"><SettingsIcon /></button>
+        </div>
       </header>
 
       <div className="sidebar-projects-heading">
         <span>Projects</span>
-        <button aria-label="Add project" className="sidebar-icon-button" type="button">+</button>
+        <button aria-label="Add project" className="sidebar-icon-button sidebar-add-project" type="button"><PlusIcon /></button>
       </div>
 
       <nav aria-label="Projects" className="sidebar-projects">
@@ -33,17 +44,18 @@ export function Sidebar() {
           const isExpanded = expandedProjects[project] ?? false;
           const projectFeatures = features.filter((feature) => feature.project === project);
           const hasBlockedChild = !isExpanded && projectFeatures.some((feature) => feature.state === "blocked");
+          const hasSelectedFeature = projectFeatures.some((feature) => feature.id === activeFeatureId);
 
           return (
             <div className="sidebar-project" key={project}>
-              <div className="sidebar-project-row">
+              <div className={`sidebar-project-row${hasBlockedChild ? " sidebar-project-row--blocked" : ""}${hasSelectedFeature ? " sidebar-project-row--selected" : ""}`}>
                 <button
                   aria-expanded={isExpanded}
-                  className={`sidebar-project-toggle${hasBlockedChild ? " sidebar-project-toggle--blocked" : ""}`}
+                  className={`sidebar-project-toggle${hasBlockedChild ? " sidebar-project-toggle--blocked" : ""}${hasSelectedFeature ? " sidebar-project-toggle--selected" : ""}`}
                   onClick={() => toggleProject(project)}
                   type="button"
                 >
-                  <span aria-hidden="true" className="sidebar-chevron">{isExpanded ? "⌄" : "›"}</span>
+                  <span aria-hidden="true" className="sidebar-chevron"><ChevronIcon direction={isExpanded ? "down" : "right"} /></span>
                   <span>{project}</span>
                 </button>
                 <button
@@ -52,7 +64,7 @@ export function Sidebar() {
                   onClick={(event) => event.stopPropagation()}
                   type="button"
                 >
-                  +
+                  <PlusIcon size={12} />
                 </button>
               </div>
               {isExpanded && (
@@ -67,10 +79,8 @@ export function Sidebar() {
                       type="button"
                     >
                       <span aria-hidden="true" className="feature-state-dot" />
-                      <span className="sidebar-feature-copy">
-                        <span className="sidebar-feature-title">{feature.title}</span>
-                        <span className="sidebar-feature-id">{featureNumber(feature.id)}</span>
-                      </span>
+                      <span className="sidebar-feature-id">{featureNumber(feature.id)}</span>
+                      <span className="sidebar-feature-title">{feature.title}</span>
                     </button>
                   ))}
                 </div>
@@ -81,9 +91,8 @@ export function Sidebar() {
       </nav>
 
       <footer className="sidebar-footer">
-        <div aria-label="Current user" className="sidebar-user">
-          <span aria-hidden="true" className="sidebar-avatar">A</span>
-          <span>Alvin</span>
+        <div aria-label="Avatar placeholder" className="sidebar-avatar-placeholder">
+          avatar<br />(dynamic)
         </div>
         <AgentUsage />
       </footer>

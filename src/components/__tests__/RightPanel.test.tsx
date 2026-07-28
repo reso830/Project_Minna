@@ -32,13 +32,11 @@ describe("RightPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Select cart drawer" }));
 
     const agent = screen.getByRole("button", { name: /agent-1.*working/i });
-    expect(agent).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.click(agent);
     expect(agent).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("$ writing CartDrawer.tsx")).toBeInTheDocument();
 
     fireEvent.click(agent);
+    expect(agent).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("$ writing CartDrawer.tsx")).not.toBeInTheDocument();
   });
 
