@@ -11,7 +11,7 @@ import { handleToolCall } from "./tools.js";
 export const advertisedTools = [
   {
     name: "status",
-    description: "List tracked orchestration features.",
+    description: "List tracked work items.",
     inputSchema: {
       type: "object" as const,
       properties: {}

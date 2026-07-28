@@ -1,5 +1,3 @@
-export type AgentRole = "operator" | "claude" | "codex";
-
 export type Actor = "human" | "system" | (string & {});
 
 export interface EventEnvelope<TPayload = unknown> {
@@ -50,50 +48,6 @@ export interface ProjectContext {
   key: string;
   mode: "central" | "embedded";
   project: ProjectConfig;
-}
-
-export interface WorkflowPhase {
-  id: PhaseId;
-  owner: AgentRole;
-  description: string;
-  gate?: string;
-  next?: PhaseId;
-}
-
-export interface WorkflowConfig {
-  name: string;
-  version: string;
-  phases: WorkflowPhase[];
-}
-
-export interface FeatureState {
-  id: string;
-  project: string;
-  title: string;
-  phase: PhaseId;
-  createdAt: string;
-  updatedAt: string;
-  decisions: OperatorDecision[];
-  manualTests: ManualTestResult[];
-  github?: {
-    issue?: string;
-    pullRequest?: string;
-    branch?: string;
-  };
-}
-
-export interface OperatorDecision {
-  id: string;
-  question: string;
-  answer: string;
-  recordedAt: string;
-}
-
-export interface ManualTestResult {
-  id: string;
-  passed: boolean;
-  notes: string;
-  recordedAt: string;
 }
 
 export type WorkItemState = "parked" | "active" | "blocked" | "closed";
@@ -159,7 +113,8 @@ export type AgentMessageEventType =
 export type LifecycleEventType =
   | "work_item.created"
   | "work_item.state_changed"
-  | "human.decided";
+  | "human.decided"
+  | "human.manual_test_recorded";
 
 export type WorkItemEventType = ExecutionEventType | AgentMessageEventType | LifecycleEventType;
 

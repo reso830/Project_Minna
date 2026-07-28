@@ -84,6 +84,7 @@ const LIFECYCLE_EVENT_TYPES = new Set<LifecycleEventType>([
   "work_item.created",
   "work_item.state_changed",
   "human.decided",
+  "human.manual_test_recorded",
 ]);
 
 const ALL_WORK_ITEM_EVENT_TYPES = new Set<string>([
