@@ -2,13 +2,33 @@ import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { Actor, EventEnvelope, FeatureProjection } from "./types.js";
+import { isWorkItemEventType } from "./work-item-model.js";
 
 const DEFAULT_DB_PATH = join(".minna", "minna.db");
+
+const EVENT_WORK_ITEM_COLUMNS = ["work_item_id", "summary", "artifact_path"] as const;
 
 export function openDb(dbPath = DEFAULT_DB_PATH): DatabaseSync {
   const db = new DatabaseSync(dbPath);
   db.exec("PRAGMA foreign_keys = ON;");
   return db;
+}
+
+/**
+ * A database initialized by a prior release has an `events` table without the work-item
+ * columns; `CREATE TABLE IF NOT EXISTS` leaves that schema untouched, so the columns must
+ * be added explicitly on every initDb call.
+ */
+function migrateEventsWorkItemColumns(db: DatabaseSync): void {
+  const existingColumns = new Set(
+    (db.prepare("PRAGMA table_info(events)").all() as Array<{ name: string }>).map(row => row.name),
+  );
+
+  for (const column of EVENT_WORK_ITEM_COLUMNS) {
+    if (!existingColumns.has(column)) {
+      db.exec(`ALTER TABLE events ADD COLUMN ${column} TEXT`);
+    }
+  }
 }
 
 export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
@@ -24,13 +44,32 @@ export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
         timestamp TEXT NOT NULL,
         actor TEXT NOT NULL,
         type TEXT NOT NULL,
-        payload TEXT NOT NULL
+        payload TEXT NOT NULL,
+        work_item_id TEXT,
+        summary TEXT,
+        artifact_path TEXT
       );
 
       CREATE TABLE IF NOT EXISTS features (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS work_items (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        state TEXT NOT NULL,
+        phase TEXT NOT NULL,
+        work_item_type TEXT NOT NULL,
+        blocked_reason TEXT,
+        assignee TEXT,
+        project TEXT NOT NULL,
+        branch TEXT,
+        pr_url TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -47,6 +86,8 @@ export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
         SELECT RAISE(ROLLBACK, 'Deletions are not allowed on the append-only events journal.');
       END;
     `);
+
+    migrateEventsWorkItemColumns(db);
   } finally {
     db.close();
   }
@@ -282,7 +323,9 @@ export async function verifyDb(db: DatabaseSync): Promise<VerificationResult> {
         }
         feature.status = payload.status;
         feature.updated_at = event.timestamp;
-      } else {
+      } else if (!isWorkItemEventType(event.type)) {
+        // Work-item events (see work-items.ts) share this journal but fall outside the
+        // feature projection's replay scope entirely; they're not a discrepancy here.
         discrepancies.push(`Unsupported journal event type '${event.type}' at event ${event.id}.`);
       }
     } catch (error) {
