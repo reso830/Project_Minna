@@ -47,6 +47,7 @@ The existing CLI scripts are separated to prevent collisions with the Next.js li
   ```bash
   npm run test:ui
   ```
+  Before Phase 02 creates the Next.js App Router directory (`src/app`), this command intentionally exits successfully without starting Jest. Once that directory exists, it runs the Jest suite normally.
 - **CLI backend unit tests** (powered by Node.js built-in runner):
   ```bash
   npm run test:unit
