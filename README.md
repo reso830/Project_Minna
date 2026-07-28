@@ -28,11 +28,21 @@ Project_Minna/
 npm install
 cp projects.example.yaml projects.yaml
 npm run build
+npm test
 npm run start -- status
 npm run start -- log
 npm run start -- verify
 npm run start -- export --feature <id> ./specs/001-event-journal
 ```
+
+## Testing and CI
+
+Unit tests use Node.js's built-in `node:test` framework. Run the complete local
+suite with `npm test`; after building, run only the compiled unit tests with
+`npm run test:unit`.
+
+GitHub Actions runs the build and unit-test commands for pull requests to
+`main` and for pushes to `main`.
 
 ## Project Modes
 
