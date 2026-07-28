@@ -26,8 +26,9 @@ test("fixture data covers every state, every blocked_reason, and every phase_gro
     }
 
     const reasons = new Set(items.map(item => item.blocked_reason).filter(Boolean));
-    assert.ok(reasons.has("clarification-required"));
-    assert.ok(reasons.has("ci-pending"));
+    for (const reason of ["clarification-required", "approval-required", "external-dependency", "ci-pending", "failed"]) {
+      assert.ok(reasons.has(reason as never), `expected fixture data to cover blocked_reason '${reason}'`);
+    }
 
     const groups = new Set(items.map(item => item.phase_group));
     for (const group of ["define", "create", "integrate"]) {

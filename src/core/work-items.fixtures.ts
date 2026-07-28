@@ -50,6 +50,23 @@ export const FIXTURE_WORK_ITEMS: CreateWorkItemInput[] = [
     state: "active", phase: "integrate", work_item_type: "feature",
     assignee: "codex", project: "celia",
   },
+  {
+    // Not in the source doc's literal fixture list — added so every BlockedReason (not just
+    // clarification-required/ci-pending) is exercised, per review feedback on PR #4.
+    id: "celia-029", title: "Multi-currency support", description: "Decide whether to store amounts in minor units across currencies.",
+    state: "blocked", phase: "plan", work_item_type: "feature",
+    blocked_reason: "approval-required", assignee: "claude", project: "celia",
+  },
+  {
+    id: "celia-030", title: "Bank feed integration", description: "Waiting on the bank's sandbox API credentials.",
+    state: "blocked", phase: "implement", work_item_type: "feature",
+    blocked_reason: "external-dependency", assignee: null, project: "celia",
+  },
+  {
+    id: "celia-031", title: "Legacy import script", description: "One-off script to import balances from the old ledger.",
+    state: "blocked", phase: "implement", work_item_type: "issue",
+    blocked_reason: "failed", assignee: "codex", project: "celia",
+  },
 ];
 
 export async function seedFixtureWorkItems(db: DatabaseSync, actor: WorkItemActor = "minna"): Promise<WorkItem[]> {

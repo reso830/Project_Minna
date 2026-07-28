@@ -13,6 +13,7 @@ import {
   updateFeatureStatus,
   verifyDb,
 } from "./db.js";
+import { appendWorkItemEvent, createWorkItem } from "./work-items.js";
 
 async function withScratchDb(run: (db: DatabaseSync) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), "minna-journal-write-"));
@@ -76,6 +77,65 @@ test("initializes the work_items projection table and the events table's work-it
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("adds work-item columns to an events table created by a prior release", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-journal-upgrade-"));
+  const dbPath = join(dir, "minna.db");
+
+  try {
+    // Simulate a pre-upgrade database: the original 001 schema, no work-item columns/table.
+    const legacyDb = new DatabaseSync(dbPath);
+    legacyDb.exec(`
+      CREATE TABLE events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        type TEXT NOT NULL,
+        payload TEXT NOT NULL
+      );
+      CREATE TABLE features (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    legacyDb.prepare(
+      "INSERT INTO events (timestamp, actor, type, payload) VALUES (?, ?, ?, ?)",
+    ).run("2026-01-01T00:00:00.000Z", "human", "feature.created", '{"id":"legacy","title":"Legacy","status":"initial"}');
+    legacyDb.close();
+
+    await initDb(dbPath);
+
+    const db = new DatabaseSync(dbPath);
+    const columns = db.prepare("PRAGMA table_info(events)").all().map(row => String((row as { name: string }).name));
+    for (const column of ["work_item_id", "summary", "artifact_path"]) {
+      assert.ok(columns.includes(column), `expected upgraded events.${column} to exist`);
+    }
+
+    const count = (db.prepare("SELECT COUNT(*) AS count FROM events").get() as { count: number }).count;
+    assert.equal(count, 1, "the pre-existing event row must survive the column migration");
+    db.close();
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("verifyDb does not flag work-item journal events as unsupported", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", {
+      id: "verify-wi", title: "t", description: "d", work_item_type: "issue", project: "p",
+    });
+    await appendWorkItemEvent(db, {
+      work_item_id: "verify-wi", actor: "minna", type: "execution.started", summary: "s", payload: {},
+    });
+
+    const result = await verifyDb(db);
+    assert.equal(result.consistent, true);
+    assert.deepEqual(result.discrepancies, []);
+  });
 });
 
 test("rolls back an injected failure without persisting its event or projection", async () => {

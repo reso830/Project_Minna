@@ -86,6 +86,16 @@ const LIFECYCLE_EVENT_TYPES = new Set<LifecycleEventType>([
   "human.decided",
 ]);
 
+const ALL_WORK_ITEM_EVENT_TYPES = new Set<string>([
+  ...EXECUTION_EVENT_TYPES,
+  ...AGENT_MESSAGE_EVENT_TYPES,
+  ...LIFECYCLE_EVENT_TYPES,
+]);
+
+export function isWorkItemEventType(type: string): type is WorkItemEventType {
+  return ALL_WORK_ITEM_EVENT_TYPES.has(type);
+}
+
 export type EventFamily = "execution" | "agent_message" | "lifecycle";
 
 export function classifyEventFamily(type: WorkItemEventType): EventFamily {
