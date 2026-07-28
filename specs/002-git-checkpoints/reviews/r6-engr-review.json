@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The current data model now defines `git.snapshot_create_failed` with a JSON payload and TypeScript interface, and T001/T002/T014/T010 require its validation and replay handling."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/data-model.md",
+      "line": 149,
+      "summary": "Replay matches a failure event to a creation attempt without comparing commit hash, so a collision can incorrectly invalidate an existing successful checkpoint.",
+      "evidence": "data-model.md:101-113 includes `commitHash` in `GitSnapshotCreateFailedPayload`, but data-model.md:148-151 matches failures to `git.snapshot_created` using only `contextType`, `id`, and `seq`. On the required sequence-collision path, an already successful checkpoint and the new failed attempt necessarily share those three values but have different commit hashes. The stated replay then treats the successful original as aborted and expects its existing ref not to resolve, reporting false drift.",
+      "recommendation": "Match the compensating failure event to its exact creation attempt using `commitHash` as well as context type, ID, and sequence; define and test the collision case with both the existing successful event/ref and the new failed-attempt event present."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 91,
+      "summary": "restoreCheckpoint's own `git.snapshot_restored` event write happens after the destructive restore has already mutated the worktree, and unlike createCheckpoint's now carefully-specified event-first/compensating-event protocol, no failure behavior is defined for this write.",
+      "evidence": "plan.md's Restore Flow writes `git.snapshot_restored` as the last step (step 4), strictly after the Index-Isolated Restore (step 3) has already checked out files and deleted checkpoint-absent files -- i.e. after the worktree mutation is already irreversible from this operation's own perspective. Neither plan.md, contracts/api.md, tasks.md T009, nor the new data-model.md section 5 verifyDb semantics (which only correlate `git.snapshot_created`/`git.snapshot_create_failed`) say what happens if this specific journal write fails: whether the caller sees a thrown error despite the restore having actually succeeded, and whether `minna verify` has any way to detect a restore that completed on disk with no matching event.",
+      "recommendation": "Document the failure behavior for the `git.snapshot_restored` write explicitly (e.g. it is best-effort/logged-but-non-fatal since the worktree mutation cannot be undone at that point, or the CLI must clearly report 'restore succeeded, but the audit event failed to record' rather than a generic error), and note whether/how `minna verify` can detect a restore with no corresponding event."
+    }
+  ]
+}

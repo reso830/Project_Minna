@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The current data model and T014 now match compensating failure events to creation attempts by context type, ID, sequence, and commit hash, with the sequence-collision behavior explicitly documented."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "The restore-audit failure behavior is now explicitly defined in the data model, plan, API contract, and T008/T009; its constitutional and requirements conflict is reported below as a new finding."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 91,
+      "summary": "Restore treats failure to write its mandatory audit event as a successful exit, violating the feature's fail-closed and event-recording requirements.",
+      "evidence": "plan.md:91, data-model.md:148, contracts/api.md:97-99, and tasks.md:124/145 require stderr output but exit 0 when `git.snapshot_restored` cannot be recorded. FR-007 says every restore MUST record `git.snapshot_restored`, and FR-009 says checkpoint failures MUST surface as explicit errors rather than success. contracts/cli.md:73-75 also still specifies exit 1 for a database event logging failure, so the package gives incompatible command outcomes.",
+      "recommendation": "Treat a restore audit-write failure as a nonzero, fail-closed command result while truthfully stating that the worktree mutation already completed; specify an in-scope durable reconciliation/audit recovery path and align the plan, data model, API contract, CLI contract, tasks, and tests."
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "responds_to": "r1-engr-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Updated the dirty status check to run git status --porcelain --ignored and scan for modifications in configured includeIgnored files on disk, ensuring safety checkpoints are generated before restore if any ignored scratch files are dirty.",
+      "files": [
+        "specs/002-git-checkpoints/spec.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 2,
+      "action": "addressed",
+      "change": "Specified concrete, index-isolated restore algorithm using temporary git index and git checkout-index, with comparison/deletion of checkpoint-absent files. Removed alternative read-tree framing from design, contracts, and tasks.",
+      "files": [
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 3,
+      "action": "addressed",
+      "change": "Specified concrete cross-system rollback procedure: wrap SQLite event write and git update-ref in a SQLite transaction, rolling back on update-ref failure. On SQLite commit failure, run compensating git update-ref -d to delete the orphaned ref.",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "responds_to": "r4-engr-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Replaced database event deletion with appending a compensating git.snapshot_create_failed event to the SQLite database journal on git ref update failure. Unified all four design documents to be consistent with this append-only behavior (Article III).",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md",
+        "specs/002-git-checkpoints/spec.md"
+      ]
+    },
+    {
+      "id": 2,
+      "action": "addressed",
+      "change": "Updated task T010 in tasks.md to assert the current event-first ordering: (1) if initial event write fails, no git reference is created, and (2) if git ref write fails, the original event is retained and a compensating git.snapshot_create_failed event is appended.",
+      "files": [
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    }
+  ]
+}

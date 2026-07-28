@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "responds_to": "r1-arch-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Specified concrete, index-isolated restore algorithm using temporary git index and git checkout-index, with comparison/deletion of checkpoint-absent files. Removed alternative read-tree framing from design, contracts, and tasks.",
+      "files": [
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 2,
+      "action": "addressed",
+      "change": "Specified concrete cross-system rollback procedure: wrap SQLite event write and git update-ref in a SQLite transaction, rolling back on update-ref failure. On SQLite commit failure, run compensating git update-ref -d to delete the orphaned ref.",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 3,
+      "action": "addressed",
+      "change": "Added explicit tasks and constraints requiring checkpoint/restore test suites to run within dynamically initialized temporary git repositories ('git init' fixture directories), leaving the host Project Minna repository untouched.",
+      "files": [
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 4,
+      "action": "addressed",
+      "change": "Added an explicit assumption that checkpoints require at least one existing commit in the repository, and unborn-HEAD repositories are unsupported.",
+      "files": [
+        "specs/002-git-checkpoints/spec.md",
+        "specs/002-git-checkpoints/plan.md"
+      ]
+    },
+    {
+      "id": 5,
+      "action": "addressed",
+      "change": "Added success criteria SC-005, SC-006, SC-007, and SC-008 to explicitly cover ignored path tolerance, monotonic create-only sequencing, journal logging verification, and fail-closed transaction recovery outcomes.",
+      "files": [
+        "specs/002-git-checkpoints/spec.md"
+      ]
+    }
+  ]
+}

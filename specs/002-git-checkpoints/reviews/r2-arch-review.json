@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "plan.md Restore Flow (lines 83-93), contracts/api.md (Index-Isolated Restore), and tasks.md T009 now specify one concrete algorithm (`git read-tree --index-output=<temp-index> <target-ref>` then `git --index-file=<temp-index> checkout-index -a -f -u`), and the ambiguous `read-tree -m -u <target-ref> or extract files` framing is gone. Reproduced the new algorithm in a scratch repo: HEAD was unchanged and `git status --porcelain` reported the restored content as unstaged (` M a.txt`, `?? b.txt`) afterward, confirming FR-006/Article XIV compliance."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "data-model.md #4, plan.md steps f-k, contracts/api.md, and tasks.md T005 now specify a concrete cross-system protocol: open a SQLite transaction, insert the event row, write the git ref, commit the transaction only if the ref write succeeded, roll back if the ref write failed, and run a compensating `git update-ref -d` if the transaction commit itself fails. This is an exact, testable recovery procedure for both failure directions, resolving the original hand-waved 'should'/'can be' language. A narrower residual gap this fix does not cover is reported as a new finding below."
+    },
+    {
+      "id": 3,
+      "disposition": "verified",
+      "note": "tasks.md T003 now requires an isolated fixture repo created via `fs.mkdtemp` + `git init` in a before/beforeEach hook and states the host Project Minna repository must never be written to; T011 requires teardown removing the scratch directories; plan.md's Validation Approach section 1 restates the same constraint."
+    },
+    {
+      "id": 4,
+      "disposition": "verified",
+      "note": "spec.md Assumptions (line 158, \"Existing Commit Requirement\") and plan.md Technical Context (line 20) now explicitly state checkpoints require at least one existing commit and that unborn-HEAD repositories are unsupported — the documentation remediation I recommended as an acceptable alternative to adding a guard."
+    },
+    {
+      "id": 5,
+      "disposition": "verified",
+      "note": "spec.md Success Criteria now includes SC-005 (ignored-path tolerance), SC-006 (monotonic/create-only sequencing), SC-007 (journal event logging), and SC-008 (fail-closed consistency), covering the previously-uncovered FR-002/FR-004/FR-007/FR-009."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 88,
+      "summary": "The restore algorithm's new file-deletion step (\"delete any files present in the worktree that are absent in the target commit\") has no concrete enumeration mechanism specified, and every document omits excluding `.git/` from the worktree-file comparison — implemented literally, this would delete the repository's own `.git` directory.",
+      "evidence": "Ran a scratch-repo test: `git ls-tree -r --name-only <checkpoint-commit>` lists only `a.txt`, while a plain recursive worktree scan (`find . -type f`) returns 27 entries including `.git/HEAD`, `.git/config`, `.git/index`, and everything under `.git/hooks/` and `.git/objects/` — none of which appear in the checkpoint tree. plan.md line 88 (Restore Flow step 3.c), contracts/api.md (Index-Isolated Restore step 3), and tasks.md T009 step 3 all instruct comparing 'files in the worktree' against 'the target commit's tree' and deleting the difference, without ever saying to exclude `.git/` or any Minna-internal directories from that scan. Additionally, T008's restore-test list (4 items: unstaged writes, index non-invasiveness, pre-restore safety, db logging) has no test covering this deletion step at all, so this new destructive behavior currently ships untested.",
+      "recommendation": "Specify the exact enumeration mechanism using git's own indices rather than a filesystem walk: compute the deletion set as (checkpoint tree's file list, via `git --index-file=<temp-index> ls-files`) diffed against (the pre-restore worktree's tracked+untracked+includeIgnored file list, via `git ls-files --cached --others --exclude-standard` plus the configured includeIgnored paths) — both of which naturally exclude `.git/`. Add an explicit T008 test asserting a file absent from the checkpoint is deleted on restore, AND that `.git/`/repository-internal paths are never candidates for deletion."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/data-model.md",
+      "line": 111,
+      "summary": "The new cross-system consistency protocol handles graceful failures (a thrown exception) but not a hard process crash between the git ref write succeeding and the SQLite transaction committing, and defines no reconciliation mechanism for an orphaned ref left by such a crash.",
+      "evidence": "data-model.md #4 steps 4-7 only trigger the compensating `update-ref -d` in response to a *caught* SQLite commit failure (step 7: \"If the SQLite commit itself fails, immediately execute...\"). A crash (power loss, OOM kill, forced termination) between step 4 (ref write succeeds) and step 5 (transaction commit) leaves the ref permanently orphaned with no code left running to catch it. data-model.md #1 states checkpoints have no SQLite projection table, so `minna verify`'s re-derive-and-diff mechanism (Constitution VI) has no projection to diff an orphaned checkpoint ref against and would not surface this drift either.",
+      "recommendation": "Given single-operator/local scope this is a narrow, crash-only residual gap (the graceful-failure case is now well-specified) — acceptable to accept as a documented known limitation rather than solved outright, but state it explicitly in data-model.md rather than leaving it implicit. Alternatively, write and commit the event row with a 'pending' status before the git ref write, so a later `minna checkpoints`/`minna verify` invocation can sweep and reconcile any ref left without a completed event."
+    }
+  ]
+}

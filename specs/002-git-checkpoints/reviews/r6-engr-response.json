@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "responds_to": "r6-engr-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Updated verifyDb replay logic to match git.snapshot_create_failed compensating events to their corresponding git.snapshot_created attempts using commitHash as well as contextType, ID, and sequence, ensuring sequence collisions do not incorrectly invalidate active successful checkpoints.",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 2,
+      "action": "addressed",
+      "change": "Specified and documented that writing git.snapshot_restored on restore is best-effort and non-fatal: a DB logging failure outputs a warning to stderr but does not fail the restore. Deferred verifyDb detection of restore-without-event anomalies to Feature 010.",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    }
+  ]
+}

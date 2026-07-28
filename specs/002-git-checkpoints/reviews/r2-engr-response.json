@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "responds_to": "r2-engr-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Replaced the invalid --index-file option syntax with setting the GIT_INDEX_FILE environment variable for the git checkout-index subprocess invocation.",
+      "files": [
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 2,
+      "action": "addressed",
+      "change": "Restricted deletion candidates during restore to tracked files, untracked files, and configured includeIgnored files on disk. Any unconfigured ignored files are completely excluded from candidate scan, meaning they are never deleted or modified during restore.",
+      "files": [
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    }
+  ]
+}

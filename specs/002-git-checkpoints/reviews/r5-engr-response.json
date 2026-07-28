@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "responds_to": "r5-engr-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Defined the complete contract for the git.snapshot_create_failed event (including payload schema, original execution reference keys, error representation, and TypeScript type) in data-model.md. Added verification and verifyDb replay semantics in data-model.md step 5. Updated tasks T001 (types), T002 (registered verification types), and T014 (replay verification logic) to enforce schema validation and ref-to-db drift checks.",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/tasks.md",
+        "specs/002-git-checkpoints/spec.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md"
+      ]
+    }
+  ]
+}

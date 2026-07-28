@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 81,
+      "summary": "The restore mechanism is specified as either of two non-equivalent git operations, and one of the two options violates the FR-006/Article XIV requirement that restored content land unstaged with the index undisturbed.",
+      "evidence": "plan.md's Restore Flow step 3 reads: \"Run git read-tree -m -u <target-ref> or extract files to replace current files (all restored files written unstaged; index and HEAD left undisturbed)\" — presenting both as interchangeable. I reproduced this in a scratch repo: after committing a change and resetting to the base commit, running `git read-tree -m -u <target-commit>` against the real (default) index left `git status --porcelain` reporting `M  a.txt` (index/staged status) and `git diff --cached` showing the restored content — i.e. the restore was staged and the index was mutated, directly contradicting the parenthetical claim in the same sentence and spec.md FR-006 (\"Restore operations MUST write files into the active worktree as unstaged content\") and FR-003/Article XIV's index-undisturbed requirement. contracts/api.md and tasks.md T009 repeat the same either/or framing (\"via git checkout-index or reading files\").",
+      "recommendation": "Pick one concrete mechanism and remove the ambiguous alternative from plan.md, contracts/api.md, and tasks.md T009: extract files from the checkpoint tree directly to the worktree (e.g. via `git checkout-index` against a temporary/detached tree, or manual blob reads + fs writes) without ever running read-tree/checkout against the repository's real index. Add a test asserting the real index is byte-identical before and after restore, not just HEAD."
+    },
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/data-model.md",
+      "line": 111,
+      "summary": "The recovery procedure for a SQLite journal-write failure that happens after the git checkpoint ref has already been created is described in hedging language (\"should\", \"can be\") rather than specified, leaving a real window where a checkpoint ref exists in git with no corresponding journal event.",
+      "evidence": "data-model.md #4 states: \"If database event logging fails, the entire operation should fail-closed (though the dangling commit itself will have been written to the git database, the ref update can be rolled back or aborted if database record fails).\" plan.md's Architecture flow orders step (f) `git update-ref ...` strictly before step (g) \"Record 'git.snapshot_created' in SQLite event journal\", so the ref is live before the journal write is attempted. No document (plan.md, data-model.md, contracts/api.md, tasks.md T005) states the concrete rollback command (e.g. `git update-ref -d <ref> <sha>`) or what happens if that rollback itself fails. tasks.md T010 further mislabels this as \"database transaction rollback ... (both-or-nothing)\", but a git ref and a SQLite row are two independent, non-transactional systems — \"both-or-nothing\" is not achievable by a DB transaction alone.",
+      "recommendation": "Specify the exact cross-system recovery procedure explicitly, e.g.: on journal-write failure, immediately run `git update-ref -d <ref> <sha-just-written>` to delete the orphaned ref before propagating the error, and surface a distinct error if that delete itself fails (true fail-closed, per FR-009 / Article XIII). Add a task/test that forces the DB write to fail and asserts the git ref no longer resolves afterward, not merely that the process doesn't crash."
+    },
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/tasks.md",
+      "line": 137,
+      "summary": "No task specifies running the checkpoint/restore test suite against an isolated fixture git repository, so tests appear to create and delete real refs/commit objects directly in this repository (the one being dogfooded).",
+      "evidence": "T003 (\"Initialize unit test file for checkpoints\"), T004/T008 (creation/restoration tests), and T011 (\"Clean up test environment databases and temp directories ... Assert no dangling test refs/files remain in the repository\") never mention creating a disposable `git init` fixture directory. T011's own phrasing — \"remain in the repository\" — implies the tests operate against Project Minna's actual `.git`, so every test run writes real dangling commits under `refs/minna/checkpoints/...` in the live repo and depends entirely on best-effort teardown (not structural isolation) for hygiene.",
+      "recommendation": "Add an explicit constraint/task requiring all checkpoint/restore tests to `git init` a throwaway directory (e.g. via `fs.mkdtemp` in a `before`/`beforeEach` hook) and run every git operation against that fixture repo, never against the actual Project Minna working tree."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/spec.md",
+      "line": 151,
+      "summary": "The spec's Assumptions section does not address the unborn-HEAD edge case (a repository with zero commits), where `git commit-tree ... -p HEAD` fails.",
+      "evidence": "Ran `git init` in an empty scratch directory then `git commit-tree $(git write-tree) -p HEAD -m test`; it exits 128 with `fatal: not a valid object name HEAD`. spec.md's Assumptions section (lines 151-153) covers git-version compatibility, single-operator execution, and journal availability, but not this case, and no FR or task mentions it.",
+      "recommendation": "Either add an explicit assumption (\"checkpoints require at least one existing commit; unborn-HEAD repos are unsupported\") or add a guard that omits `-p HEAD` when `git rev-parse HEAD` fails, plus a test covering it."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/spec.md",
+      "line": 138,
+      "summary": "The Success Criteria section (SC-001..004) covers only a subset of the Functional Requirements and the feature brief's Independent Tests, leaving FR-002, FR-004, FR-007, and FR-009 without a matching measurable success criterion.",
+      "evidence": "spec.md lines 138-146 define SC-001 (restore fidelity), SC-002 (non-invasiveness), SC-003 (pre-restore safety), and SC-004 (temp-file cleanup), but there is no SC covering ignored-path tolerance (FR-002), monotonic/create-only sequencing (FR-004), journal-event emission (FR-007), or fail-closed error surfacing (FR-009) — these are only asserted at the FR/task level, not as measurable outcomes, even though the feature brief's \"Independent tests\" section lists equivalents for all of them.",
+      "recommendation": "Add SC-005..008 (or fold into existing SCs) so every FR has an explicit, measurable success criterion, mirroring the brief's Independent Tests list one-to-one."
+    }
+  ]
+}

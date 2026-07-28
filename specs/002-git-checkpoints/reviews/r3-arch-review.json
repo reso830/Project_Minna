@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "verdict": "approve",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "plan.md (lines 88-91), contracts/api.md (lines 93-96), and tasks.md T009 (lines 140-143) now define a concrete git-based deletion-set computation: candidate files = `git ls-files --cached --others --exclude-standard` plus configured includeIgnored paths existing on disk; checkpoint files = `git ls-files` run under `GIT_INDEX_FILE=<temp-index>`; delete only candidates absent from the checkpoint list. I reproduced this in a scratch repo with a tracked file, an untracked file, a configured-ignored file (scratch/agent.log), and an unconfigured-ignored file (node_modules/pkg/file.js): the candidate list correctly excluded node_modules entirely (0 occurrences) and neither candidate nor checkpoint listings ever contained a `.git/` path (0 occurrences in either), while HEAD and the main index stayed unchanged (`git diff --cached --stat` empty) after checkout-index. tasks.md T008 now also has explicit test items (4: deletion behavior, 5: `.git/`/Minna-internal directory safety, 6: unconfigured-ignored-path safety) covering exactly this. The finding is fully resolved."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "data-model.md #4 now has an explicit \"Crash-Window Limitation\" paragraph (line 120) stating that a hard crash between a successful git ref write and the SQLite transaction commit leaves an orphaned, unreconciled ref, documented as a known local single-operator limitation with reconciliation deferred to Feature 010/M2 — exactly the 'accept and document explicitly' remediation I offered as an acceptable alternative to solving it outright."
+    }
+  ],
+  "new_findings": []
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "data-model.md, plan.md, contracts/api.md, and tasks.md T005 now all commit the `git.snapshot_created` event before running `git update-ref`, so a hard crash can no longer leave a live, usable checkpoint ref without a corresponding durable journal event -- the exact defect described is now structurally impossible. The mechanism this ordering now depends on for its failure path introduces a distinct new problem, reported separately below."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 63,
+      "summary": "The new compensating-rollback mechanism for a failed git-ref update deletes an already-committed SQLite journal event row, directly violating the Constitution's explicit, unconditional rule that events are never updated or deleted.",
+      "evidence": "constitution.md line 62 states plainly: \"Events are never updated or deleted.\" (Article III, no stated exceptions). plan.md's Checkpoint Creation Flow writes and *commits* the `git.snapshot_created` event (step f, \"committed first to ensure durability\") strictly before the `git update-ref` call (step g); step h then reads: \"If the git ref update fails (e.g. sequence collision), delete the SQLite journal event row from the database (compensating rollback) and propagate the error.\" Because the event is already committed by the time this would run, this is a literal DELETE of a row that is part of the append-only journal's committed history, not an uncommitted-transaction abort. The identical delete-the-row instruction is repeated in contracts/api.md (step 8) and tasks.md T005 (step 8) and T004 (test item 8: \"assert that the database event row is deleted/rolled back\"). data-model.md line 116 is the only document that hedges with an alternative (\"delete ... or write a compensating rollback event\"), but plan.md, contracts/api.md, and tasks.md commit to delete-only wording with no such alternative, so the package is not even internally consistent about which behavior is intended.",
+      "recommendation": "Never delete a committed event. Either (a) revert to writing the git ref first and committing the event only after the ref write succeeds, accepting the previously-documented and already-accepted crash-window limitation, and use a git-side-only compensating action (deleting the orphaned *ref*, which is not subject to event-immutability) if the later event-commit fails; or (b) keep the event-first ordering but on ref-update failure, append a new compensating event (e.g. `git.snapshot_create_failed`, referencing the original event) instead of deleting the row, so the journal stays strictly append-only while still truthfully recording the failed attempt. Make plan.md, contracts/api.md, and tasks.md (T004, T005) consistent with whichever is chosen -- do not leave data-model.md's softer phrasing as the only constitutionally-compliant description while the other three mandate the delete."
+    },
+    {
+      "severity": "minor",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/tasks.md",
+      "line": 149,
+      "summary": "Tasks.md T010 still describes the superseded write ordering (a DB-write failure rolls back the git ref) and now contradicts T004/T005's current event-first ordering (a ref-write failure rolls back the event), left over from this round's reordering fix.",
+      "evidence": "T010's Expected Behavior reads: \"Write tests asserting database transaction rollback if SQLite event logging fails (both-or-nothing), and verification that the ref update is rolled back or deleted accordingly.\" That is the round-2/3 design (ref written first; a DB failure rolls back/deletes the ref). T004 item 8 and T005 step 8 now describe the opposite direction: the event is committed first, and a *ref*-update failure triggers deleting the *event*. T010 was not updated to match, and specifies a failure-injection direction (mock a SQLite logging failure) that, under the current ordering, happens before any ref-write step is even reached.",
+      "recommendation": "Rewrite or remove T010 so it matches the current ordering -- either fold its intent into T004/T005's existing rollback coverage, or repoint it at the failure mode the new design actually needs tested (e.g. verifying no ref is ever created when the event write/commit itself fails)."
+    }
+  ]
+}

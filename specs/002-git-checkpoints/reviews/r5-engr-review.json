@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The current data model, plan, API contract, and T004/T005/T010 require appending `git.snapshot_create_failed` after a ref-update failure and explicitly prohibit deleting the committed creation event, preserving the append-only journal."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "tasks.md T010 is rewritten to match the current event-first ordering: (1) an initial event-write failure aborts before any ref is created, and (2) a ref-write failure leaves the original `git.snapshot_created` intact and appends a compensating `git.snapshot_create_failed`. It no longer describes the superseded ref-first ordering and is now consistent with T004/T005."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "major",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/data-model.md",
+      "line": 37,
+      "summary": "The new `git.snapshot_create_failed` event has no payload contract or validation semantics, despite being required for the failure path.",
+      "evidence": "data-model.md:37 says the append-only journal has 'Two new event types' and defines only `git.snapshot_created` and `git.snapshot_restored` (lines 39-88); it contains no `GitSnapshotCreateFailedPayload`. Yet data-model.md:116, plan.md:63, contracts/api.md:54, and tasks.md T004/T005/T010 require `git.snapshot_create_failed`. T001 only names a future interface, T002 merely accepts the type, and T014's replay-validation task still names only created/restored events. Consequently the required failure event has no specified JSON shape, required reference fields, or verification/replay behavior.",
+      "recommendation": "Add a complete `git.snapshot_create_failed` event contract (payload schema, link to the original creation attempt, error representation, TypeScript type, parser/validator and verifyDb replay semantics), and update T001, T002, T014, and tests so both the normal and compensating event paths are schema-valid and auditable."
+    }
+  ]
+}

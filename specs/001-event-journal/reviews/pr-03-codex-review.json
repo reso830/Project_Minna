@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "verdict": "unable_to_review",
+  "unable_reason": "I implemented portions of feature 001 in the preceding work, so Constitution XV and the PR-review procedure prohibit me from acting as this PR's independent non-implementer reviewer.",
+  "prior_findings": [],
+  "new_findings": []
+}

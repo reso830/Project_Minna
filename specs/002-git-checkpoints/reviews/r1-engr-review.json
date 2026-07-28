@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 75,
+      "summary": "The proposed dirty-worktree check misses configured ignored files, so restore can overwrite them without first creating the required safety checkpoint.",
+      "evidence": "plan.md:75 and tasks.md:123 specify `git status --porcelain` for the check while requiring configured ignored files to be included. In an isolated Git repository, `git status --porcelain` produced no output for a modified ignored file, whereas `git status --porcelain --ignored` produced `!! ignored.txt`.",
+      "recommendation": "Specify and test a dirty-state calculation that includes every existing configured includeIgnored path as well as staged, unstaged, and untracked changes; only restore after that calculation has either created the pre-restore checkpoint or established the worktree is clean."
+    },
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 80,
+      "summary": "The restore plan does not select an algorithm that can both reproduce the checkpoint state and leave the primary index unchanged.",
+      "evidence": "plan.md:80-82 proposes `git read-tree -m -u <target-ref>` 'or extract files', but `read-tree -u` updates the working tree and index, while the unspecified extraction alternative has no defined deletion behavior for paths absent from the checkpoint. FR-003 and contracts/api.md:87-88 require the main index to remain undisturbed, and SC-001 requires full restoration.",
+      "recommendation": "Define one concrete, index-isolated restore algorithm, including how it removes checkpoint-absent paths after the safety snapshot, and add tests proving the primary index is byte-for-byte unchanged while the resulting worktree matches the checkpoint."
+    },
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 61,
+      "summary": "Checkpoint creation writes the Git ref before its mandatory journal event without defining recovery for either failure direction.",
+      "evidence": "plan.md:61 creates the checkpoint ref and plan.md:63 records `git.snapshot_created` afterwards. If the journal write fails, the ref persists with no required event; reversing the order would instead leave an event for a ref that failed to be created. The plan provides no compensating or recovery protocol, despite FR-007 requiring every creation to record an event and the review prompt requiring same-transaction event coupling.",
+      "recommendation": "Specify a durable consistency protocol for Git refs and journal events, including failure recovery and tests for failures after each side effect, so no successful-looking checkpoint or restore state can exist without its corresponding audit event."
+    }
+  ]
+}

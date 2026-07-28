@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "responds_to": "r3-engr-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Redesigned the execution ordering: the SQLite journal event is now written and committed to disk first, and only then is the git update-ref command executed. A process crash between these steps leaves a harmless database event without a git ref, structurally guaranteeing that no live git checkpoint reference can ever exist without a corresponding event record.",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md",
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    }
+  ]
+}

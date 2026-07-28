@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The current plan, API contract, and T009 require `git status --porcelain --ignored` plus configured-path checks before restore, and T008 covers ignored-path safety checkpoints."
+    },
+    {
+      "id": 2,
+      "disposition": "still_open",
+      "note": "The design now selects a temporary-index algorithm, but its specified `git --index-file=<temp-index> checkout-index` command is invalid Git syntax, so the planned restore cannot execute as documented."
+    },
+    {
+      "id": 3,
+      "disposition": "verified",
+      "note": "The current plan, data model, API contract, and T004/T005 specify a SQLite transaction, compensating `git update-ref -d <ref> <commit-sha>` after commit failure, a fatal error if compensation fails, and failure-injection tests."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 87,
+      "summary": "The specified temporary-index checkout command is not valid Git syntax, so the documented index-isolated restore flow cannot run.",
+      "evidence": "plan.md:87, contracts/api.md:92, and tasks.md:136 require `git --index-file=<temp-index> checkout-index -a -f -u`. In an isolated temporary repository, `git -C <repo> --index-file=temp-index status` exited with `unknown option: --index-file=temp-index`; Git uses the GIT_INDEX_FILE environment variable, not a global `--index-file` option.",
+      "recommendation": "Replace the invalid command consistently with a valid temporary-index invocation (for example, set GIT_INDEX_FILE for checkout-index), then test that the main index remains byte-identical while the target tree is restored unstaged."
+    },
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/plan.md",
+      "line": 88,
+      "summary": "Restore can delete ignored paths that were not captured by the pre-restore checkpoint.",
+      "evidence": "plan.md:78 treats all ignored paths as dirty via `git status --porcelain --ignored`, but checkpoint creation force-adds only configured includeIgnored paths (plan.md:57-58). plan.md:88 and tasks.md:137 then require deletion of any worktree file absent from the target tree, including ignored paths. Thus an existing ignored path outside includeIgnored is neither captured nor retained before this deletion.",
+      "recommendation": "Define deletion scope so restore never removes an ignored path unless it was captured by the safety checkpoint, or expand the safety checkpoint’s capture set to every ignored path that deletion may affect; add an ignored-but-unconfigured fixture test."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "verdict": "changes_required",
+  "prior_findings": [
+    {
+      "id": 1,
+      "disposition": "verified",
+      "note": "The current plan, API contract, and T009 consistently set GIT_INDEX_FILE for checkout-index. I ran the documented temporary-index sequence in an isolated repository: it restored target content and the primary index tree hash was unchanged."
+    },
+    {
+      "id": 2,
+      "disposition": "verified",
+      "note": "The current plan, API contract, and T009 restrict deletion candidates to tracked files, untracked non-ignored files, and configured includeIgnored paths; they explicitly exclude unconfigured ignored paths, and T008 adds a fixture test for this case."
+    }
+  ],
+  "new_findings": [
+    {
+      "severity": "blocker",
+      "class": "in_scope",
+      "verification": "checked",
+      "file": "specs/002-git-checkpoints/data-model.md",
+      "line": 120,
+      "summary": "The documented hard-crash window leaves a live checkpoint ref without its mandatory journal event, then defers reconciliation outside this feature.",
+      "evidence": "data-model.md:111 requires every checkpoint operation to record an event, but data-model.md:120 explicitly permits a successful `git update-ref` followed by a hard crash before SQLite commit, leaving an orphaned ref with no journal entry and defers reconciliation to Feature 010/M2. This violates FR-007 and the Constitution Article XIII fail-closed / Article III event-coupling requirements stated by the review gate.",
+      "recommendation": "Keep 002 fail-closed by specifying and implementing an in-scope recovery protocol before any checkpoint ref is trusted or acted on (including startup/operation reconciliation of unjournaled refs), or redesign the ordering/storage so a crash cannot leave a usable ref without its event; do not defer this mandatory audit invariant to M2."
+    }
+  ]
+}

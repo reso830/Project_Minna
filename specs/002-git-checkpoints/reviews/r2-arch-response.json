@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "responds_to": "r2-arch-review.json",
+  "responses": [
+    {
+      "id": 1,
+      "action": "addressed",
+      "change": "Specified git-based deletion set computation comparing candidate files (tracked+untracked files via git ls-files plus configured includeIgnored files) against target checkpoint files (git ls-files run under GIT_INDEX_FILE env var), explicitly excluding .git/ and unconfigured ignored paths. Added explicit test cases under tasks T008 for checkpoint-absent file deletion, .git/ safety, and unconfigured ignored file safety.",
+      "files": [
+        "specs/002-git-checkpoints/plan.md",
+        "specs/002-git-checkpoints/contracts/api.md",
+        "specs/002-git-checkpoints/tasks.md"
+      ]
+    },
+    {
+      "id": 2,
+      "action": "addressed",
+      "change": "Explicitly documented the crash-window orphaned ref occurrence under Integrity and Consistency Invariants in data-model.md as a known local single-operator limitation (with reconciliation/recovery deferred to Feature 010 / M2).",
+      "files": [
+        "specs/002-git-checkpoints/data-model.md"
+      ]
+    }
+  ]
+}
