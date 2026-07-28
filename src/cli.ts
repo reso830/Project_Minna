@@ -3,7 +3,8 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { exportFeatureJournal, initDb, openDb, readEvents, verifyDb } from "./core/db.js";
 import { deriveBlockedPresentation } from "./core/work-item-model.js";
-import { appendWorkItemEvent, createWorkItem, readWorkItems } from "./core/work-items.js";
+import { appendWorkItemEvent, createWorkItem, readWorkItemEvents, readWorkItems } from "./core/work-items.js";
+import { resolveProjectContext } from "./core/project-context.js";
 import type { WorkItemType } from "./core/types.js";
 
 const [command, ...args] = process.argv.slice(2);
@@ -63,18 +64,23 @@ async function status(): Promise<void> {
 }
 
 async function startFeatureCommand(args: string[]): Promise<void> {
-  const project = getFlag(args, "--project");
+  const projectFlag = getFlag(args, "--project");
   const title = getFlag(args, "--title");
   const description = getFlag(args, "--description") ?? "";
   const typeFlag = getFlag(args, "--type");
 
-  if (!project || !title) {
-    throw new Error("Usage: start-feature --project <key> --title <title> [--type feature|issue] [--description <text>]");
+  if (!title) {
+    throw new Error("Usage: start-feature [--project <key>] --title <title> [--type feature|issue] [--description <text>]");
   }
   if (typeFlag !== undefined && typeFlag !== "feature" && typeFlag !== "issue") {
     throw new Error("Usage: --type must be 'feature' or 'issue'");
   }
   const workItemType: WorkItemType = (typeFlag as WorkItemType | undefined) ?? "feature";
+
+  // In embedded mode (a minna.project.yaml in cwd), --project can be omitted, matching the
+  // documented project-resolution behavior; an explicit --project is used verbatim without
+  // central-registry validation (work_items.project is a free-text label, not a resolved key).
+  const project = projectFlag ?? (await resolveProjectContext()).key;
 
   await withJournal(async db => {
     const item = await createWorkItem(db, "human", {
@@ -147,6 +153,14 @@ async function logCommand(args: string[]): Promise<void> {
   }
 
   await withJournal(async db => {
+    if (featureId && (await readWorkItems(db)).some(item => item.id === featureId)) {
+      const events = await readWorkItemEvents(db, featureId);
+      for (const event of events) {
+        console.log(`[${event.timestamp}] [${event.actor}] [${event.type}] - ${event.summary}`);
+      }
+      return;
+    }
+
     const events = await readEvents(db, featureId ? { featureId } : undefined);
     if (featureId && !events.some(event => event.type === "feature.created")) {
       throw new Error(`Error: No such feature '${featureId}'`);
@@ -165,7 +179,7 @@ async function verifyCommand(): Promise<void> {
   await withJournal(async db => {
     const result = await verifyDb(db);
     if (result.consistent) {
-      console.log(`Verification successful: No drift detected (${result.featureCount} features, ${result.eventCount} events).`);
+      console.log(`Verification successful: No drift detected (${result.featureCount} features, ${result.workItemCount} work items, ${result.eventCount} events).`);
       return;
     }
     console.error(`Verification failed:\n${result.discrepancies.join("\n")}`);
@@ -186,10 +200,41 @@ async function exportCommand(args: string[]): Promise<void> {
   }
 
   await withJournal(async db => {
-    const markdown = await exportFeatureJournal(db, featureId);
+    const isWorkItem = (await readWorkItems(db)).some(item => item.id === featureId);
+    const markdown = isWorkItem
+      ? await exportWorkItemJournal(db, featureId)
+      : await exportFeatureJournal(db, featureId);
     await mkdir(targetDirectory, { recursive: true });
     await writeFile(join(targetDirectory, "journal.md"), markdown, "utf8");
   });
+}
+
+async function exportWorkItemJournal(db: DatabaseSync, id: string): Promise<string> {
+  const item = (await readWorkItems(db)).find(candidate => candidate.id === id);
+  if (!item) {
+    throw new Error(`Error: No such work item '${id}'`);
+  }
+
+  const events = await readWorkItemEvents(db, id);
+  const rows = events.map(event => (
+    `| ${escapeMarkdown(event.timestamp)} | ${escapeMarkdown(event.actor)} | \`${escapeMarkdown(event.type)}\` | ${escapeMarkdown(event.summary)} |`
+  ));
+
+  return [
+    `# Work Item Journal: ${item.title}`,
+    "",
+    `* **Work Item ID**: \`${id}\``,
+    `* **State**: \`${item.state}\` | **Phase**: \`${item.phase}\``,
+    "",
+    "| Timestamp (UTC) | Actor | Event Type | Summary |",
+    "|---|---|---|---|",
+    ...rows,
+    "",
+  ].join("\n");
+}
+
+function escapeMarkdown(value: string): string {
+  return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
 async function withJournal<T>(action: (db: DatabaseSync) => Promise<T>): Promise<T> {
@@ -221,7 +266,7 @@ Commands:
   log [--feature <id>]
   verify
   export --feature <id> <dir>
-  start-feature --project <key> --title <title> [--type feature|issue] [--description <text>]
+  start-feature [--project <key>] --title <title> [--type feature|issue] [--description <text>]
   record-decision --feature <id> --question <question> --answer <answer>
   record-manual-test --feature <id> --passed <true|false> [--notes <text>]
   serve-mcp`);

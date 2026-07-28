@@ -256,9 +256,105 @@ type JournalEvent = EventEnvelope<unknown> & { id: number };
 type VerificationResult = {
   consistent: boolean;
   featureCount: number;
+  workItemCount: number;
   eventCount: number;
   discrepancies: string[];
 };
+
+type WorkItemEventRow = {
+  id: number;
+  type: string;
+  payload: string;
+  work_item_id: string | null;
+};
+
+type ExpectedWorkItem = {
+  title: string;
+  state: string;
+  phase: string;
+  blocked_reason: string | null;
+};
+
+type StoredWorkItemRow = {
+  id: string;
+  title: string;
+  state: string;
+  phase: string;
+  blocked_reason: string | null;
+};
+
+function verifyWorkItemsProjection(db: DatabaseSync): string[] {
+  const discrepancies: string[] = [];
+
+  const eventRows = db.prepare(
+    "SELECT id, type, payload, work_item_id FROM events WHERE work_item_id IS NOT NULL ORDER BY id ASC",
+  ).all() as WorkItemEventRow[];
+
+  const expected = new Map<string, ExpectedWorkItem>();
+
+  for (const row of eventRows) {
+    const workItemId = row.work_item_id as string;
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(row.payload) as Record<string, unknown>;
+    } catch (error) {
+      discrepancies.push(`Invalid work-item event ${row.id}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+
+    if (row.type === "work_item.created") {
+      if (expected.has(workItemId)) {
+        discrepancies.push(`Invariant violation: work item '${workItemId}' has more than one work_item.created event.`);
+        continue;
+      }
+      expected.set(workItemId, {
+        title: String(payload.title ?? ""),
+        state: String(payload.state ?? ""),
+        phase: String(payload.phase ?? ""),
+        blocked_reason: (payload.blocked_reason as string | null | undefined) ?? null,
+      });
+    } else if (row.type === "work_item.state_changed") {
+      const workItem = expected.get(workItemId);
+      if (!workItem) {
+        discrepancies.push(`Invariant violation: work item '${workItemId}' has a work_item.state_changed event before creation.`);
+        continue;
+      }
+      workItem.state = String(payload.state ?? "");
+      workItem.phase = String(payload.phase ?? "");
+      workItem.blocked_reason = (payload.blocked_reason as string | null | undefined) ?? null;
+    }
+  }
+
+  const storedRows = db.prepare(
+    "SELECT id, title, state, phase, blocked_reason FROM work_items",
+  ).all() as StoredWorkItemRow[];
+  const storedById = new Map(storedRows.map(row => [row.id, row]));
+
+  for (const [id, expectedItem] of expected) {
+    const stored = storedById.get(id);
+    if (!stored) {
+      discrepancies.push(`Drift detected in work item '${id}': projection row is missing.`);
+      continue;
+    }
+    for (const field of ["title", "state", "phase", "blocked_reason"] as const) {
+      if (stored[field] !== expectedItem[field]) {
+        discrepancies.push(
+          `Drift detected in work item '${id}': field '${field}' has stored value '${stored[field]}' but replay derived '${expectedItem[field]}'.`,
+        );
+      }
+    }
+  }
+
+  for (const stored of storedRows) {
+    if (!expected.has(stored.id)) {
+      discrepancies.push(
+        `Invariant violation: work item '${stored.id}' exists in work_items projection table but has no corresponding work_item.created event in the journal.`,
+      );
+    }
+  }
+
+  return discrepancies;
+}
 
 function payloadId(payload: unknown): string | undefined {
   return typeof payload === "object" && payload !== null && typeof (payload as { id?: unknown }).id === "string"
@@ -357,9 +453,14 @@ export async function verifyDb(db: DatabaseSync): Promise<VerificationResult> {
     }
   }
 
+  discrepancies.push(...verifyWorkItemsProjection(db));
+
+  const workItemCount = (db.prepare("SELECT COUNT(*) AS count FROM work_items").get() as { count: number }).count;
+
   return {
     consistent: discrepancies.length === 0,
     featureCount: storedFeatures.length,
+    workItemCount,
     eventCount: events.length,
     discrepancies,
   };

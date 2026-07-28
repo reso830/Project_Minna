@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -87,7 +87,7 @@ test("prints usage for all commands without any [DISABLED] markers", async () =>
   try {
     const help = await runCli(dir);
     assert.doesNotMatch(help.stdout, /DISABLED/);
-    assert.match(help.stdout, /start-feature --project/);
+    assert.match(help.stdout, /start-feature \[--project <key>\]/);
     assert.match(help.stdout, /record-decision --feature/);
     assert.match(help.stdout, /record-manual-test --feature/);
   } finally {
@@ -167,6 +167,54 @@ test("record-manual-test appends a human.manual_test_recorded event", async () =
     } finally {
       db.close();
     }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("log and export work for a work item created via start-feature", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-log-export-workitem-"));
+  const exportDir = join(dir, "export");
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "Loggable item");
+    const id = created.stdout.match(/Created (\S+) \|/)?.[1];
+    assert.ok(id);
+
+    const log = await runCli(dir, "log", "--feature", id!);
+    assert.equal(log.exitCode, 0);
+    assert.match(log.stdout, /work_item\.created/);
+
+    const exported = await runCli(dir, "export", "--feature", id!, exportDir);
+    assert.equal(exported.exitCode, 0);
+    assert.match(await readFile(join(exportDir, "journal.md"), "utf8"), /# Work Item Journal: Loggable item/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("start-feature resolves the project from minna.project.yaml when --project is omitted", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-embedded-"));
+  try {
+    await writeFile(
+      join(dir, "minna.project.yaml"),
+      "project:\n  key: celia\n  name: Celia\n  path: .\n  speckit_dir: .specify\n",
+      "utf8",
+    );
+
+    const created = await runCli(dir, "start-feature", "--title", "Embedded item");
+    assert.equal(created.exitCode, 0);
+    assert.match(created.stdout, /^Created celia-embedded-item-\d+ \| parked \| spec$/m);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("start-feature fails closed when no project can be resolved", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-noproject-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--title", "No project");
+    assert.equal(created.exitCode, 1);
+    assert.match(created.stderr, /No project selected/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

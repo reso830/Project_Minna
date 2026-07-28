@@ -13,7 +13,7 @@ import {
   updateFeatureStatus,
   verifyDb,
 } from "./db.js";
-import { appendWorkItemEvent, createWorkItem } from "./work-items.js";
+import { appendWorkItemEvent, createWorkItem, updateWorkItemState } from "./work-items.js";
 
 async function withScratchDb(run: (db: DatabaseSync) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), "minna-journal-write-"));
@@ -135,6 +135,37 @@ test("verifyDb does not flag work-item journal events as unsupported", async () 
     const result = await verifyDb(db);
     assert.equal(result.consistent, true);
     assert.deepEqual(result.discrepancies, []);
+    assert.equal(result.workItemCount, 1);
+  });
+});
+
+test("verifyDb reflects a work item's state_changed history and reports drift after direct tampering", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", {
+      id: "verify-transition-wi", title: "t", description: "d", work_item_type: "issue", project: "p",
+    });
+    await updateWorkItemState(db, "minna", "verify-transition-wi", { state: "blocked", blocked_reason: "ci-pending" });
+    assert.equal((await verifyDb(db)).consistent, true);
+
+    db.prepare("UPDATE work_items SET blocked_reason = ? WHERE id = ?").run("failed", "verify-transition-wi");
+    const verification = await verifyDb(db);
+
+    assert.equal(verification.consistent, false);
+    assert.ok(verification.discrepancies.some(message => message.includes("verify-transition-wi") && message.includes("blocked_reason")));
+  });
+});
+
+test("verifyDb reports an orphaned work_items projection row", async () => {
+  await withScratchDb(async db => {
+    db.prepare(
+      `INSERT INTO work_items (id, title, description, state, phase, work_item_type, blocked_reason, assignee, project, branch, pr_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL, NULL, ?, ?)`,
+    ).run("orphan-wi", "Orphan", "d", "parked", "spec", "feature", "p", "2026-01-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z");
+
+    const verification = await verifyDb(db);
+
+    assert.equal(verification.consistent, false);
+    assert.ok(verification.discrepancies.some(message => message.includes("orphan-wi") && message.includes("no corresponding work_item.created")));
   });
 });
 
