@@ -8,15 +8,11 @@ It is intended to sit beside target project repositories and coordinate Spec Kit
 
 ```text
 Project_Minna/
-  projects.example.yaml     # Template for target project registry
   projects.yaml             # Local target project registry, ignored by git
-  policies.yaml             # Role and approval rules
-  workflows/
-    speckit-feature.yaml    # Feature lifecycle definition
   src/
     adapters/               # Codex, Claude, GitHub integration boundaries
     cli.ts                  # Local operator CLI
-    core/                   # State, workflow, policy, project loading
+    core/                   # Event journal, work items, project loading
     server/
       mcp.ts                # MCP tool surface
   .minna/                   # Local SQLite event journal (ignored by git)
@@ -26,7 +22,6 @@ Project_Minna/
 
 ```bash
 npm install
-cp projects.example.yaml projects.yaml
 npm run build
 npm test
 npm run start -- status
@@ -70,10 +65,11 @@ Use [minna.project.example.yaml](./minna.project.example.yaml) as the starting p
 
 This first version intentionally leaves a few parts as explicit follow-up work:
 
-- `policies.yaml` defines roles and gates, but enforcement is not wired yet.
-- Workflow phases can be inspected, but phase advancement commands are still pending.
+- Work-item transition legality (which phase/state changes are allowed) is not
+  enforced yet; `start-feature`/`record-decision`/`record-manual-test` write
+  directly.
 - The M1 source of truth is the local SQLite journal at `.minna/minna.db`; its
-  `features` table is a projection of append-only events.
+  `features` and `work_items` tables are projections of append-only events.
 - Concurrent SQLite writers are not yet handled; M1 is intentionally single-operator.
 
 ## Event Journal

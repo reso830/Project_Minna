@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createFeature, initDb, openDb, updateFeatureStatus } from "./core/db.js";
+import { readWorkItemEvents } from "./core/work-items.js";
 
 const cliPath = fileURLToPath(new URL("./cli.js", import.meta.url));
 
@@ -67,7 +68,7 @@ test("verifies a clean journal and reports field-level projection drift", async 
   }
 });
 
-test("exports a feature timeline and disables all legacy state-mutating commands", async () => {
+test("exports a feature timeline", async () => {
   const dir = await mkdtemp(join(tmpdir(), "minna-cli-export-"));
   const exportDir = join(dir, "export");
 
@@ -76,21 +77,144 @@ test("exports a feature timeline and disables all legacy state-mutating commands
     const exported = await runCli(dir, "export", "--feature", "cli-feature", exportDir);
     assert.equal(exported.exitCode, 0);
     assert.match(await readFile(join(exportDir, "journal.md"), "utf8"), /# Event Journal: CLI Feature/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
 
-    for (const command of [
-      ["start-feature", "--project", "test", "--title", "blocked"],
-      ["record-decision", "--feature", "test", "--question", "q", "--answer", "a"],
-      ["record-manual-test", "--feature", "test", "--passed", "true"],
-    ]) {
-      const result = await runCli(dir, ...command);
-      assert.equal(result.exitCode, 1);
-      assert.match(result.stderr, /Error: Command disabled in M1\. Event Journal write API is the sole state mutation path; integration is deferred to M2\./);
+test("prints usage for all commands without any [DISABLED] markers", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-help-"));
+  try {
+    const help = await runCli(dir);
+    assert.doesNotMatch(help.stdout, /DISABLED/);
+    assert.match(help.stdout, /start-feature \[--project <key>\]/);
+    assert.match(help.stdout, /record-decision --feature/);
+    assert.match(help.stdout, /record-manual-test --feature/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("start-feature creates a work item and status reports it", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-feature-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "New thing");
+    assert.equal(created.exitCode, 0);
+    assert.match(created.stdout, /^Created celia-new-thing-\d+ \| parked \| spec$/m);
+
+    const statusResult = await runCli(dir, "status");
+    assert.equal(statusResult.exitCode, 0);
+    assert.match(statusResult.stdout, /celia-new-thing-\d+ \| celia \| spec \| New thing/);
+    assert.match(statusResult.stdout, /state: parked/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("start-feature --type issue defaults to the implement phase", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-issue-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "Fix typo", "--type", "issue");
+    assert.equal(created.exitCode, 0);
+    assert.match(created.stdout, /\| parked \| implement$/m);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("record-decision appends a human.decided event and fails closed for an unknown work item", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-record-decision-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "Needs a call");
+    const id = created.stdout.match(/Created (\S+) \|/)?.[1];
+    assert.ok(id);
+
+    const recorded = await runCli(dir, "record-decision", "--feature", id!, "--question", "Ship it?", "--answer", "Yes");
+    assert.equal(recorded.exitCode, 0);
+
+    const db = openDb(join(dir, ".minna", "minna.db"));
+    try {
+      const events = await readWorkItemEvents(db, id!);
+      assert.ok(events.some(event => event.type === "human.decided" && event.summary.includes("Ship it?")));
+    } finally {
+      db.close();
     }
 
-    const help = await runCli(dir);
-    assert.match(help.stdout, /start-feature \[DISABLED in M1\]/);
-    assert.match(help.stdout, /record-decision \[DISABLED in M1\]/);
-    assert.match(help.stdout, /record-manual-test \[DISABLED in M1\]/);
+    const unknown = await runCli(dir, "record-decision", "--feature", "missing-item", "--question", "q", "--answer", "a");
+    assert.equal(unknown.exitCode, 1);
+    assert.match(unknown.stderr, /No such work item 'missing-item'/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("record-manual-test appends a human.manual_test_recorded event", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-record-manual-test-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "Verify checkout");
+    const id = created.stdout.match(/Created (\S+) \|/)?.[1];
+    assert.ok(id);
+
+    const recorded = await runCli(dir, "record-manual-test", "--feature", id!, "--passed", "false", "--notes", "Checkout button is unresponsive");
+    assert.equal(recorded.exitCode, 0);
+
+    const db = openDb(join(dir, ".minna", "minna.db"));
+    try {
+      const events = await readWorkItemEvents(db, id!);
+      const testEvent = events.find(event => event.type === "human.manual_test_recorded");
+      assert.ok(testEvent);
+      assert.deepEqual(testEvent!.payload, { passed: false, notes: "Checkout button is unresponsive" });
+    } finally {
+      db.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("log and export work for a work item created via start-feature", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-log-export-workitem-"));
+  const exportDir = join(dir, "export");
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "Loggable item");
+    const id = created.stdout.match(/Created (\S+) \|/)?.[1];
+    assert.ok(id);
+
+    const log = await runCli(dir, "log", "--feature", id!);
+    assert.equal(log.exitCode, 0);
+    assert.match(log.stdout, /work_item\.created/);
+
+    const exported = await runCli(dir, "export", "--feature", id!, exportDir);
+    assert.equal(exported.exitCode, 0);
+    assert.match(await readFile(join(exportDir, "journal.md"), "utf8"), /# Work Item Journal: Loggable item/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("start-feature resolves the project from minna.project.yaml when --project is omitted", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-embedded-"));
+  try {
+    await writeFile(
+      join(dir, "minna.project.yaml"),
+      "project:\n  key: celia\n  name: Celia\n  path: .\n  speckit_dir: .specify\n",
+      "utf8",
+    );
+
+    const created = await runCli(dir, "start-feature", "--title", "Embedded item");
+    assert.equal(created.exitCode, 0);
+    assert.match(created.stdout, /^Created celia-embedded-item-\d+ \| parked \| spec$/m);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("start-feature fails closed when no project can be resolved", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-noproject-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--title", "No project");
+    assert.equal(created.exitCode, 1);
+    assert.match(created.stderr, /No project selected/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

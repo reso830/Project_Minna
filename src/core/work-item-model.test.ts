@@ -58,6 +58,7 @@ test("classifies execution events, agent messages, and lifecycle events into dis
     ["work_item.created", "lifecycle"],
     ["work_item.state_changed", "lifecycle"],
     ["human.decided", "lifecycle"],
+    ["human.manual_test_recorded", "lifecycle"],
   ];
 
   for (const [type, family] of cases) {
