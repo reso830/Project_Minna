@@ -51,6 +51,33 @@ test("initializes journal tables and append-only triggers in a scratch database"
   }
 });
 
+test("initializes the work_items projection table and the events table's work-item columns", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-journal-workitems-"));
+  const dbPath = join(dir, "minna.db");
+
+  try {
+    await initDb(dbPath);
+
+    const db = new DatabaseSync(dbPath);
+    const tableNames = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map(row => String((row as { name: string }).name));
+    assert.ok(tableNames.includes("work_items"), "expected work_items table to be initialized");
+
+    const eventColumns = db
+      .prepare("PRAGMA table_info(events)")
+      .all()
+      .map(row => String((row as { name: string }).name));
+    for (const column of ["work_item_id", "summary", "artifact_path"]) {
+      assert.ok(eventColumns.includes(column), `expected events.${column} to exist`);
+    }
+    db.close();
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("rolls back an injected failure without persisting its event or projection", async () => {
   await withScratchDb(async db => {
     await assert.rejects(

@@ -24,13 +24,32 @@ export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
         timestamp TEXT NOT NULL,
         actor TEXT NOT NULL,
         type TEXT NOT NULL,
-        payload TEXT NOT NULL
+        payload TEXT NOT NULL,
+        work_item_id TEXT,
+        summary TEXT,
+        artifact_path TEXT
       );
 
       CREATE TABLE IF NOT EXISTS features (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS work_items (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        state TEXT NOT NULL,
+        phase TEXT NOT NULL,
+        work_item_type TEXT NOT NULL,
+        blocked_reason TEXT,
+        assignee TEXT,
+        project TEXT NOT NULL,
+        branch TEXT,
+        pr_url TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
