@@ -11,7 +11,7 @@ export interface WorkspaceState {
   // Navigation & Selections (using globally unique feature IDs, e.g. "checkout-redesign-001")
   activeFeatureId: string | null;
   activeRightTab: "agents" | "md" | "diff";
-  
+
   // Sidebar Expand/Collapse
   expandedProjects: Record<string, boolean>; // Maps project name to toggle state
   expandedAgents: Record<string, boolean>;   // Maps agent id to toggle state

@@ -1,25 +1,25 @@
 # Feature Specification: Journal View
 
-**Feature Branch**: `001-journal-view`  
-**Created**: 2026-07-28  
-**Status**: Draft  
+**Feature Branch**: `001-journal-view`
+**Created**: 2026-07-28
+**Status**: Draft
 **Input**: [001-journal-view.md](file:///D:/Alvin/_CodeProjects/Project_Minna/docs/features/v1.0.0-minna-foundations/001-journal-view.md)
 
 ## Clarifications
 
 ### Session 2026-07-28
 
-- **Q**: Which frontend technology stack should be used, and where should its source code reside?  
+- **Q**: Which frontend technology stack should be used, and where should its source code reside?
   → **A**: A single Next.js app using TypeScript throughout, in a unified repository with a single root `package.json` (one thing to run).
-- **Q**: Should we map the design's projects/features and journal/agent timelines directly to the existing [WorkItem](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L75) and [WorkItemEvent](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L121) schemas defined in [types.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts)?  
+- **Q**: Should we map the design's projects/features and journal/agent timelines directly to the existing [WorkItem](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L75) and [WorkItemEvent](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L121) schemas defined in [types.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts)?
   → **A**: Yes. A "project" maps to the `project` string field, a "feature" maps to a [WorkItem](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L75) (where `work_item_type` is `"feature"`), and message bubbles/agent logs map to [WorkItemEvent](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L121) collections.
-- **Q**: Which views need to be functional and fully modeled in this feature?  
-  → **A**: Only the Journal View is implemented. The empty state represents the Journal View if it doesn't have any contents on it; it is not a separate view state. The Board View is not implemented.
-- **Q**: Where should these session-persistent UI states (selected feature, resolved decisions, panel collapse states) be stored?  
+- **Q**: Which views need to be functional and fully modeled in this feature?
+  → **A**: The Journal View and its project-scoped Board view are implemented. The empty state renders inside the Journal View when it has no contents; it is not a separate view state.
+- **Q**: Where should these session-persistent UI states (selected feature, resolved decisions, panel collapse states) be stored?
   → **A**: In the browser's `sessionStorage` so that user interactions survive page reloads but clear when the browser session ends.
-- **Q**: For the mock features, should their plan markdown and code diffs be bundled directly as static strings in the mock data file, or fetched dynamically as static assets?  
+- **Q**: For the mock features, should their plan markdown and code diffs be bundled directly as static strings in the mock data file, or fetched dynamically as static assets?
   → **A**: Bundled directly as static strings/objects within the frontend's mock data files.
-- **Q**: Are the design handoff's exact color codes and typography sizes the final acceptance baseline?  
+- **Q**: Are the design handoff's exact color codes and typography sizes the final acceptance baseline?
   → **A**: Yes. Because this is a greenfield UI with no pre-existing frontend design system, the handoff prototype's exact styles (hex values, font rules) serve as the authoritative baseline/source-of-truth.
 
 ## Problem Statement
@@ -31,7 +31,7 @@ Minna's primary interface model needs a high-fidelity, production-quality visual
 ### In scope
 
 - **Single Next.js & TypeScript Application Structure**: Unified monorepo project configured via the root [package.json](file:///D:/Alvin/_CodeProjects/Project_Minna/package.json), allowing developer execution of both CLI and UI from a single unified workspace.
-- **Left Sidebar**: 
+- **Left Sidebar**:
   - Brand header displaying the logo mark and the "minna" wordmark in JetBrains Mono.
   - Collapsible scrollable Projects list populated with mock data (e.g. Checkout Redesign, Search Revamp, Billing v2, Notifications).
   - Feature rows displaying a status color dot (parked, active, blocked, closed), a 3-digit muted ID, and the feature slug.
@@ -56,7 +56,7 @@ Minna's primary interface model needs a high-fidelity, production-quality visual
 - **Database integration or write-back**: This is a UI-only mock feature; no SQLite connection is established in the Next.js runtime.
 - **Project or feature creation persistence**: Hovering or clicking sidebar "+" elements may trigger UI dialogs or actions, but no items are saved to disk.
 - **Live agent or subprocess execution**: The terminal output in the AGENTS tab is fully static and mock-derived.
-- **Board (Kanban) View**: The Board toggle is a placeholder and is not implemented.
+- **Board (Kanban) View data persistence**: The project-scoped Board view is UI-only; moving or creating cards does not persist data.
 - **Git integration**: The git branch info displayed below the composer is mocked.
 - **Authentication or Multi-user support**: The workspace runs locally as a single-operator interface.
 

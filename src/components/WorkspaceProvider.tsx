@@ -6,7 +6,7 @@ import { mockEvents, mockFeatures } from "../core/mockData";
 import type { WorkItem, WorkItemEvent } from "../core/types";
 
 type RightTab = "agents" | "md" | "diff";
-type WorkspaceView = "journal" | "board" | "blank";
+type WorkspaceView = "journal" | "board";
 
 interface WorkspaceContextValue {
   activeFeatureId: string | null;
@@ -20,7 +20,6 @@ interface WorkspaceContextValue {
   selectFeature: (featureId: string) => void;
   setRightTab: (tab: RightTab) => void;
   toggleWorkspaceView: () => void;
-  toggleBlankPreview: () => void;
   toggleProject: (projectName: string) => void;
   toggleAgent: (agentId: string) => void;
   submitReply: (featureId: string, text: string) => void;
@@ -122,9 +121,6 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     },
     toggleWorkspaceView: () => {
       setActiveView((current) => current === "board" ? "journal" : "board");
-    },
-    toggleBlankPreview: () => {
-      setActiveView((current) => current === "blank" ? "journal" : "blank");
     },
     toggleProject: (projectName) => {
       setExpandedProjects((current) => {

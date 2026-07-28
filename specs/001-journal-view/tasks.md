@@ -29,7 +29,7 @@
 
 - [x] **T001** **NPM Package & CI Configuration**
   * **Target Files**: [package.json](file:///D:/Alvin/_CodeProjects/Project_Minna/package.json), [.github/workflows/ci.yml](file:///D:/Alvin/_CodeProjects/Project_Minna/.github/workflows/ci.yml)
-  * **Expected Behavior**: 
+  * **Expected Behavior**:
     - Add dependencies (`next`, `react`, `react-dom`, `@fontsource/jetbrains-mono`, `@fontsource/ibm-plex-sans`, `@fontsource/ibm-plex-mono`) and devDependencies (`@types/react`, `@types/react-dom`, `jest`, `jest-environment-jsdom`, `@testing-library/react`, `@testing-library/jest-dom`).
     - Add Next.js scripts: `"dev": "next dev"`, `"build": "next build"`, `"start": "next start"`.
     - Rename CLI scripts: `"dev:cli": "tsx src/cli.ts"`, `"build:cli": "npm run clean && tsc -p tsconfig.cli.json"`, `"start:cli": "node dist/cli.js"`.
@@ -91,7 +91,7 @@
 
 - [x] **T008** **UI Interaction & Mock Data Verification Test**
   * **Target Files**: `src/core/mockData.test.ts` (New file), `src/components/__tests__/Workspace.test.tsx` (New file)
-  * **Expected Behavior**: 
+  * **Expected Behavior**:
     - Write unit tests verifying that all mock records parse against the domain schemas (valid statuses including `"spec"`/`"integrate"`, dates, and non-null values).
     - Write automated Jest/RTL interaction tests verifying component rendering, active feature sessionStorage selections caching, and decision resolution state transitions.
   * **Validation**: Run `npm run test` (CLI tests) and `npm run test:ui` (Jest/RTL UI tests) and assert all pass.
@@ -105,7 +105,7 @@
 
 - [x] **T009** **Sidebar Projects & Features UI**
   * **Target File**: `src/components/Sidebar.tsx` (New file)
-  * **Visual-Fidelity**: 
+  * **Visual-Fidelity**:
     - **Match**: `handoff/minna-journal-view/design_handoff_journal_view/Minna Prototype.dc.html#L23-L160`
     - **Breakpoints**: 1280px and above.
     - **Translation Note**: Render layout using standard flex/grid spacing and font rules matching the prototype. Include active selection indicator (`#00F0FF` background) and hover state reveal logic for "+" icons. Render logo image from `/assets/minna-mark.png` (materialized in T003d).

@@ -36,8 +36,11 @@ body {
   display: grid;
   grid-template-columns: 20% 45% 35%;
   height: 100dvh;
+  margin: 0 auto;
+  max-width: 2560px;
   min-height: 0;
   overflow: hidden;
+  width: 100%;
 }
 
 .workspace-skeleton > * { min-width: 0; min-height: 0; overflow: hidden; padding: 24px; }
@@ -45,11 +48,8 @@ body {
 .workspace-sidebar { background: var(--sidebar-background); border-right: 1px solid var(--border); padding: 0; }
 .workspace-journal { border-right: 1px solid var(--border); padding: 0; }
 .workspace-details { background: var(--detail-background); color: #c6ccc9; padding: 0; }
-.workspace-board, .workspace-empty { grid-column: 2 / -1; min-width: 0; }
+.workspace-board { grid-column: 2 / -1; min-width: 0; }
 .workspace-board { display: flex; flex-direction: column; padding: 0; }
-.workspace-empty { align-items: center; display: flex; flex-direction: column; gap: 22px; justify-content: center; padding: 40px; text-align: center; }
-.workspace-empty h1 { color: var(--text-primary); font: 600 22px var(--font-ui); margin: 0 0 8px; }
-.workspace-empty p { color: #7c8983; font: 400 14px/1.5 var(--font-body); margin: 0; max-width: 420px; }
 .board-header { align-items: center; border-bottom: 2px solid var(--border); display: flex; height: 54px; padding: 0 24px; }
 .board-header h1 { color: var(--text-primary); font: 600 17px var(--font-ui); margin: 0; }
 .board-header button { background: var(--accent-bright); border: 0; border-radius: 4px; color: #101614; cursor: pointer; font: 700 12px var(--font-ui); margin-left: auto; padding: 7px 16px; }

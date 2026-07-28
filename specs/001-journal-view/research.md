@@ -8,7 +8,7 @@ This document logs design choices and technical analysis for the **Journal View*
 
 Since Next.js pre-renders pages on the server (SSR), accessing `sessionStorage` or `window` directly inside React rendering paths causes hydration mismatches (the HTML produced by the server differs from the initial client render).
 
-* **Decision**: 
+* **Decision**:
   - Leverage React `useEffect` hooks or state initializers that run strictly on the client after hydration is complete to safely load `sessionStorage` settings.
   - Implement a loading skeleton or default state (e.g., loading mock data initially, then resolving user cache inputs) to ensure a smooth transition.
 

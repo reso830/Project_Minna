@@ -1,12 +1,9 @@
 "use client";
 
-import Image from "next/image";
-
-import { WorkspaceProvider } from "../components/WorkspaceProvider";
+import { WorkspaceProvider, useWorkspace } from "../components/WorkspaceProvider";
 import { CenterPanel } from "../components/CenterPanel";
 import { RightPanel } from "../components/RightPanel";
 import { Sidebar } from "../components/Sidebar";
-import { useWorkspace } from "../components/WorkspaceProvider";
 
 const boardColumns = [
   { state: "active", label: "ACTIVE", color: "#00c9d6" },
@@ -48,22 +45,9 @@ function BoardPanel() {
   );
 }
 
-function BlankPreview() {
-  return (
-    <section aria-label="Blank preview" className="workspace-empty">
-      <Image alt="Minna" height={96} priority src="/assets/minna-mark.png" width={96} />
-      <div>
-        <h1>Nothing running yet</h1>
-        <p>Describe what you want built. Minna will spin up agents, keep a journal of decisions, and check in when it needs you.</p>
-      </div>
-    </section>
-  );
-}
-
 function WorkspaceContent() {
   const { activeView } = useWorkspace();
 
-  if (activeView === "blank") return <BlankPreview />;
   if (activeView === "board") return <BoardPanel />;
 
   return (

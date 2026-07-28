@@ -5,7 +5,7 @@
 
 ## Summary
 
-This feature implements a Next.js (TypeScript) web interface for Minna's Journal View. Since the project is currently a Node.js CLI/MCP server, this plan configures a unified monorepo environment (one repository, one `package.json`, one thing to run). We will establish a mock data service conforming strictly to the [WorkItem](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L75) and [WorkItemEvent](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L121) types, build the multi-column workspace layout (Sidebar, Center Journal, Right Detail Panel), and implement session-level state persistence in `sessionStorage` (for selected features, resolved decisions, and console toggles). Database integration is completely out of scope, and the Board view is not implemented.
+This feature implements a Next.js (TypeScript) web interface for Minna's Journal View. Since the project is currently a Node.js CLI/MCP server, this plan configures a unified monorepo environment (one repository, one `package.json`, one thing to run). We will establish a mock data service conforming strictly to the [WorkItem](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L75) and [WorkItemEvent](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts#L121) types, build the multi-column workspace layout (Sidebar, Center Journal, Right Detail Panel), and implement session-level state persistence in `sessionStorage` (for selected features, resolved decisions, and console toggles). Database integration is completely out of scope; the project-scoped Board view is implemented with mock data only.
 
 ---
 
@@ -18,8 +18,8 @@ This feature implements a Next.js (TypeScript) web interface for Minna's Journal
   - A new `tsconfig.cli.json` handles the Node.js CLI code, restricting inclusion to `src/**/*.ts` (excluding `.tsx`) with module/moduleResolution set to `"NodeNext"`.
   - Root `package.json` CLI build script will run `tsc -p tsconfig.cli.json` instead of the root tsconfig.
 * **Storage**: Browser `sessionStorage` (for mock state duration).
-* **Testing**: 
-  - Jest, `jest-environment-jsdom`, and React Testing Library (RTL) for automated UI component testing. 
+* **Testing**:
+  - Jest, `jest-environment-jsdom`, and React Testing Library (RTL) for automated UI component testing.
   - Built-in `node:test` for CLI unit testing.
   - Test scripts: `npm run test:unit` (CLI unit tests), `npm run test:ui` (Jest UI tests), and the root script `npm test` which compiles CLI modules and executes both suites (`npm run build:cli && npm run test:unit && npm run test:ui`).
   - CI Pipeline: Configured to compile CLI files (`npm run build:cli`), compile UI files (`npm run build`), and execute both test suites sequentially (`npm run test:unit` and `npm run test:ui`).
