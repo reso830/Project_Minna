@@ -115,7 +115,7 @@ The right-side agent panel displays collapsible terminal outputs, plan outlines,
 ## Edge Cases
 
 - **Large Log Message Threads**: The message timeline in the center panel must configure an overflow scroll viewport to prevent page-height blowout on long conversations.
-- **Ultra-Wide Screens**: At widths above 1400px, the sidebar and right-side panels must maintain their fixed widths (280px and 490px respectively), with the center panel expanding horizontally to fill the fluid middle screen.
+- **Ultra-Wide Screens**: The sidebar, journal, and right-side panels maintain a fixed 20% / 45% / 35% ratio as the viewport widens. Above 2560px, the workspace stops growing and is centered with side spacers so the panels don't stretch indefinitely.
 - **Special Characters in Markdown/Diffs**: Renders of mock code files or plan markdowns containing special characters must be properly escaped in the Next.js TSX elements to prevent compilation or rendering errors.
 - **Missing Session Data**: If browser `sessionStorage` is empty or cleared, the application must fallback gracefully to default mock states without crashing.
 

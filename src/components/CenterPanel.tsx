@@ -69,7 +69,7 @@ export function CenterPanel() {
     if (timelineElement && previous.featureId === activeFeatureId && timeline.length > previous.length) {
       timelineElement.scrollTop = timelineElement.scrollHeight;
     } else if (timelineElement && previous.featureId !== activeFeatureId) {
-      timelineElement.scrollTop = 0;
+      timelineElement.scrollTop = timelineElement.scrollHeight;
     }
     previousTimeline.current = { featureId: activeFeatureId, length: timeline.length };
   }, [activeFeatureId, timeline.length]);
