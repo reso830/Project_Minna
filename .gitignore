@@ -7,3 +7,4 @@ state/*.json
 state/*.sqlite
 state/*.sqlite-*
 .minna/
+docs/superpowers/

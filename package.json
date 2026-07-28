@@ -10,7 +10,8 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsc -p tsconfig.json",
-    "test": "npm run build && node --test \"dist/**/*.test.js\"",
+    "test": "npm run build && npm run test:unit",
+    "test:unit": "node --test \"dist/**/*.test.js\"",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
     "serve:mcp": "node dist/server/mcp.js"
