@@ -1,7 +1,11 @@
 node_modules/
 dist/
+.next/
+next-env.d.ts
+*.tsbuildinfo
 .env
 .env.local
 projects.yaml
 .minna/
 docs/superpowers/
+handoff/minna-journal-view/

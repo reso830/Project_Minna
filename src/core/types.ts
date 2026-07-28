@@ -114,6 +114,7 @@ export type LifecycleEventType =
   | "work_item.created"
   | "work_item.state_changed"
   | "human.decided"
+  | "human.message"
   | "human.manual_test_recorded";
 
 export type WorkItemEventType = ExecutionEventType | AgentMessageEventType | LifecycleEventType;

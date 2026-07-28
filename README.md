@@ -10,6 +10,8 @@ It is intended to sit beside target project repositories and coordinate Spec Kit
 Project_Minna/
   projects.yaml             # Local target project registry, ignored by git
   src/
+    app/                    # Next.js Journal View routes and global styles
+    components/             # Journal workspace UI components
     adapters/               # Codex, Claude, GitHub integration boundaries
     cli.ts                  # Local operator CLI
     core/                   # Event journal, work items, project loading
@@ -22,19 +24,40 @@ Project_Minna/
 
 ```bash
 npm install
-npm run build
+npm run dev                 # Start the Journal View at http://localhost:3000
+npm run build               # Build the production Journal View
 npm test
-npm run start -- status
-npm run start -- log
-npm run start -- verify
-npm run start -- export --feature <id> ./specs/001-event-journal
+npm run build:cli
+npm run start:cli -- status
+npm run start:cli -- log
+npm run start:cli -- verify
+npm run start:cli -- export --feature <id> ./specs/001-event-journal
+```
+
+## Journal View Workspace
+
+The Journal View is a local Next.js workspace backed by representative mock data;
+it does not require a database, external API, or agent runtime.
+
+```bash
+npm run dev                 # Development UI at http://localhost:3000
+npm run build && npm run start
+npm run test:ui             # Jest + React Testing Library UI tests
+```
+
+The CLI remains available alongside the UI:
+
+```bash
+npm run build:cli
+npm run dev:cli -- status
+npm run start:cli -- status
 ```
 
 ## Testing and CI
 
-Unit tests use Node.js's built-in `node:test` framework. Run the complete local
-suite with `npm test`; after building, run only the compiled unit tests with
-`npm run test:unit`.
+The complete local suite is `npm test`. CLI unit tests use Node.js's built-in
+`node:test` framework and UI tests use Jest with React Testing Library. After
+building the CLI, run only its compiled unit tests with `npm run test:unit`.
 
 GitHub Actions runs the build and unit-test commands for pull requests to
 `main` and for pushes to `main`.
