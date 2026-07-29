@@ -27,13 +27,13 @@
 
 **Purpose**: Setup type definitions, API file endpoints, and directory mapping structures.
 
-- [ ] **T001** **Type Definitions Expansion**
+- [x] **T001** **Type Definitions Expansion**
   * **Target Files**: [src/core/types.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts)
   * **Expected Behavior**: Define TypeScript interfaces for `ProjectRegistryEntry` and `ProjectRegistry` to represent database elements in `~/.minna/projects.db`. Include `available?: boolean` and ensure casing parameters (`name` preserving casing, `id` slugified/lowercased).
   * **Constraints**: Must not break existing CLI configurations.
   * **Validation/Test Location**: Run `npm run build:cli` to verify compilation.
 
-- [ ] **T002** [P] **API Endpoint Skeleton Construction**
+- [x] **T002** [P] **API Endpoint Skeleton Construction**
   * **Target Files**:
     - `src/app/api/projects/route.ts` (New file)
     - `src/app/api/projects/pick/route.ts` (New file)
@@ -50,13 +50,13 @@
 **Purpose**: Build transactional database registry, project configuration, scaffolding, and validation helpers.
 * **⚠️ CRITICAL**: No user story UI implementation can begin until this phase is complete.
 
-- [ ] **T003** **Central Registry SQLite Wrapper**
+- [x] **T003** **Central Registry SQLite Wrapper**
   * **Target File**: `src/core/registry.ts` (New file)
   * **Expected Behavior**: Implement helper functions to read, parse, and write to SQLite database `~/.minna/projects.db`. Setup the `events` table (for append-only event journals) and the `projects` projection table. Ensure write transactions use `BEGIN IMMEDIATE TRANSACTION` to prevent concurrent write races. Automatically write the exported read-only `~/.minna/projects.json` on commit.
   * **Constraints**: Configure the database with WAL mode (`PRAGMA journal_mode = WAL`) on initialization.
   * **Validation/Test Location**: Tested in T004.
 
-- [ ] **T004** **Central Registry Core & Concurrency Tests**
+- [x] **T004** **Central Registry Core & Concurrency Tests**
   * **Target File**: `src/core/registry.test.ts` (New file)
   * **Expected Behavior**:
     - Assert database creation, event appending, and projection updating occur in the same transaction.
@@ -65,7 +65,7 @@
     - Write a concurrency test simulating multiple read-modify-write operations across different process connections, verifying that `BEGIN IMMEDIATE` queuing resolves correctly without lost updates or corruption.
   * **Validation/Test Location**: Run `npm run test` and assert registry unit tests pass.
 
-- [ ] **T005** **Project Configuration Scaffolding & Validation**
+- [x] **T005** **Project Configuration Scaffolding & Validation**
   * **Target File**: `src/core/registry.ts` (New file)
   * **Expected Behavior**: Implement functions to:
     - Scaffold `.minna/config.yaml` with exactly `version: 1`, current ISO timestamp, and `description: null` ONLY when the `.minna/` directory itself is entirely absent. Do NOT write `speckit_dir`, `github`, or `default_branch` on this fresh-scaffold path — those keys are written only when migrating a pre-existing `minna.project.yaml` (see T015b); a brand-new project has no legacy values to preserve and the brief defines the initial file as exactly these 3 keys.
@@ -75,7 +75,7 @@
   * **Constraints**: Enforce date validation checking that `created_at` complies with ISO 8601 timestamp formats.
   * **Validation/Test Location**: Tested in T006.
 
-- [ ] **T006** **Project Config & Validation Tests**
+- [x] **T006** **Project Config & Validation Tests**
   * **Target File**: `src/core/registry.test.ts`
   * **Expected Behavior**:
     - Write tests verifying that scaffolding runs on a clean folder (missing `.minna/`) and creates both `config.yaml` and `minna.db` event databases. Assert the fresh-scaffold `config.yaml` contains exactly `version`, `created_at`, and `description` — no `speckit_dir`, `github`, or `default_branch` keys.
@@ -91,13 +91,13 @@
 **Goal**: Implement the frontend selection flows and backend folder picking endpoints.
 * **Independent Test**: Clicking the Sidebar "+" button launches the OS folder picker, creates a project, and lists it in the sidebar.
 
-- [ ] **T007** **Server OS Folder Picker Implementation**
+- [x] **T007** **Server OS Folder Picker Implementation**
   * **Target File**: `src/app/api/projects/pick/route.ts`
   * **Expected Behavior**: Implement directory picker executing platform-specific commands (AppleScript on macOS, PowerShell dialog on Windows, Zenity on Linux) to capture and return the chosen absolute directory path.
   * **Constraints**: Do not introduce new npm dependencies. Handle user cancellations gracefully by returning a clean error.
   * **Validation/Test Location**: Manual verification using postman or curl.
 
-- [ ] **T008** **Project List & Add Endpoints Integration**
+- [x] **T008** **Project List & Add Endpoints Integration**
   * **Target Files**:
     - `src/app/api/projects/route.ts`
     - `src/app/api/projects/add/route.ts`
@@ -106,7 +106,7 @@
     - `/api/projects/add` validates the selected directory, scaffolds configuration and SQLite database if needed, adds the entry to the database registry, and returns the project details.
   * **Validation/Test Location**: Tested in T011.
 
-- [ ] **T009** **Sidebar Integration for Recent Projects**
+- [x] **T009** **Sidebar Integration for Recent Projects**
   * **Target Files**:
     - `src/components/Sidebar.tsx`
     - `src/components/WorkspaceProvider.tsx`
@@ -116,7 +116,7 @@
     - Add a path resolution availability check: if a project returns `available: false`, render its sidebar row in a muted, disabled "unavailable" visual style, and block click-to-open events.
   * **Validation/Test Location**: Run `npm run dev` and check sidebar renders projects correctly.
 
-- [ ] **T010** **Sidebar Add & Switch Button Integration**
+- [x] **T010** **Sidebar Add & Switch Button Integration**
   * **Target Files**:
     - `src/components/Sidebar.tsx`
     - `src/components/WorkspaceProvider.tsx`
@@ -125,7 +125,7 @@
     - Bind project row click events to call `POST /api/projects/open` passing the project `id`, updating the `last_opened_at` timestamp in the database, updating workspace state, and sorting the sidebar list.
   * **Validation/Test Location**: Select "+", verify the picker opens, choose a directory, and assert the sidebar updates. Click an existing project to verify it switches and updates ordering.
 
-- [ ] **T011** **Picker, Add & Open Endpoints Integration Tests**
+- [x] **T011** **Picker, Add & Open Endpoints Integration Tests**
   * **Target Files**: `src/app/api/__tests__/projects.test.ts` (New file)
   * **Expected Behavior**: Write unit/integration tests for server endpoints mocking standard picker shell commands and asserting project additions, scaffolding (including local DB creation), switching, and 404/410 errors on missing paths.
   * **Validation/Test Location**: Run `npm run test:ui` (or `npm run test`) and assert API tests pass.
@@ -137,7 +137,7 @@
 **Goal**: Implement error dialogs to intercept and display project initialization or validation failures.
 * **Independent Test**: Selecting a directory with missing or corrupted configs blocks interactions and renders an error modal.
 
-- [ ] **T012** **Dedicated Validation Error Modal**
+- [x] **T012** **Dedicated Validation Error Modal**
   * **Target Files**:
     - `src/components/ErrorModal.tsx` (New file)
     - `src/components/WorkspaceProvider.tsx`
@@ -145,7 +145,7 @@
   * **Constraints**: Use clean layout and CSS styling matching the design colors.
   * **Validation/Test Location**: Tested in T013.
 
-- [ ] **T013** **Error Modal UI Tests**
+- [x] **T013** **Error Modal UI Tests**
   * **Target File**: `src/components/__tests__/ErrorModal.test.tsx` (New file)
   * **Expected Behavior**: Write Jest/React Testing Library tests confirming that the modal mounts on validation failure, renders details correctly, locks background clicks, and closes on clicking the dismiss button.
   * **Validation/Test Location**: Run `npm run test:ui` and verify all tests pass.
@@ -157,29 +157,29 @@
 **Goal**: Resolve naming conflicts in the registry and integrate CLI command runs to update the opened timestamp.
 * **Independent Test**: Registering two folders named `alpha` results in registry IDs `alpha` and `alpha-2`. Running `cli.ts status` inside `alpha` updates its `last_opened_at` timestamp.
 
-- [ ] **T014** **Registry ID Collision Resolution**
+- [x] **T014** **Registry ID Collision Resolution**
   * **Target File**: `src/core/registry.ts`
   * **Expected Behavior**: Enhance registry write helpers to generate slugified folder names. If a matching ID exists for a different path, append `-2`, `-3` etc. until unique. If the path matches an existing ID, reuse it (standard re-open flow).
   * **Validation/Test Location**: Unit tests in `src/core/registry.test.ts`.
 
-- [ ] **T015a** **CLI Context Search & Traversal Walk**
+- [x] **T015a** **CLI Context Search & Traversal Walk**
   * **Target Files**:
     - `src/core/project-context.ts`
   * **Expected Behavior**: Update `resolveProjectContext` in `project-context.ts` to walk upwards from the current directory through parent directory chains to locate `.minna/config.yaml` or legacy `minna.project.yaml`.
   * **Validation/Test Location**: Tested in T017.
 
-- [ ] **T015b** **CLI Legacy Configuration Migration**
+- [x] **T015b** **CLI Legacy Configuration Migration**
   * **Target Files**:
     - `src/core/project-context.ts`
   * **Expected Behavior**: Read legacy fields (`speckit_dir`, `github`, `default_branch`) from `minna.project.yaml` and backfill `created_at` timestamp (via `birthtime` of `minna.project.yaml`, git log, or current date) to write the new `.minna/config.yaml` schema, and rename/delete the legacy file. `speckit_dir`/`github`/`default_branch` appear in `.minna/config.yaml` **only** as output of this migration path — T005's fresh-scaffold path never writes them.
   * **Validation/Test Location**: Tested in T017.
 
-- [ ] **T016** **project-context.ts Dead Resolution Cleanup**
+- [x] **T016** **project-context.ts Dead Resolution Cleanup**
   * **Target File**: [src/core/project-context.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/project-context.ts)
   * **Expected Behavior**: Delete dead references to `projects.yaml` and remove the unused `resolveCentralProject` and `CENTRAL_PROJECTS_FILE` code structures.
   * **Validation/Test Location**: Compiles cleanly via `npm run build:cli`.
 
-- [ ] **T017** **CLI Registry Sync & Verbatim Project Flag Verification**
+- [x] **T017** **CLI Registry Sync & Verbatim Project Flag Verification**
   * **Target Files**:
     - `src/core/project-context.test.ts`
     - `src/core/project-context.ts`
@@ -195,24 +195,24 @@
 
 **Purpose**: Execute final packaging tasks, version bumps, and documentation reviews.
 
-- [ ] **T018** **Version Bump Revision**
+- [x] **T018** **Version Bump Revision**
   * **Target Files**:
     - [package.json](file:///D:/Alvin/_CodeProjects/Project_Minna/package.json)
     - `package-lock.json`
   * **Expected Behavior**: Bump package.json and lockfile revision versions to `0.4.0` (reflecting new project management structures).
   * **Validation/Test Location**: Verify package file format integrity.
 
-- [ ] **T019** **Changelog Update**
+- [x] **T019** **Changelog Update**
   * **Target File**: `CHANGELOG.md`
   * **Expected Behavior**: Record new feature releases, including native directory picking API, validation error modal, database-backed registry, casing rules, and CLI registry synchronization.
   * **Validation/Test Location**: Verify formatting.
 
-- [ ] **T020** **Roadmap Indexing**
+- [x] **T020** **Roadmap Indexing**
   * **Target File**: [docs/feature_roadmap.md](file:///D:/Alvin/_CodeProjects/Project_Minna/docs/feature_roadmap.md)
   * **Expected Behavior**: Update status row for `002-project-creation` as Completed and specify the target version `0.4.0`.
   * **Validation/Test Location**: Confirm Markdown table renders.
 
-- [ ] **T021** **Documentation Alignment**
+- [x] **T021** **Documentation Alignment**
   * **Target Files**:
     - `README.md`
     - `docs/REPO_MAP.md` (Create if missing)

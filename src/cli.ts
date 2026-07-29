@@ -4,13 +4,14 @@ import type { DatabaseSync } from "node:sqlite";
 import { exportFeatureJournal, initDb, openDb, readEvents, verifyDb } from "./core/db.js";
 import { deriveBlockedPresentation } from "./core/work-item-model.js";
 import { appendWorkItemEvent, createWorkItem, readWorkItemEvents, readWorkItems } from "./core/work-items.js";
-import { resolveProjectContext } from "./core/project-context.js";
+import { resolveProjectContext, syncProjectContext } from "./core/project-context.js";
 import type { WorkItemType } from "./core/types.js";
 
 const [command, ...args] = process.argv.slice(2);
 
 async function main(): Promise<void> {
   await initDb();
+  await synchronizeProjectContext(args);
 
   switch (command) {
     case "status":
@@ -39,6 +40,21 @@ async function main(): Promise<void> {
       return;
     default:
       printHelp();
+  }
+}
+
+async function synchronizeProjectContext(commandArgs: string[]): Promise<void> {
+  if (getFlag(commandArgs, "--project")) {
+    return;
+  }
+
+  try {
+    await syncProjectContext(await resolveProjectContext());
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("No project selected.")) {
+      return;
+    }
+    throw error;
   }
 }
 
@@ -77,7 +93,7 @@ async function startFeatureCommand(args: string[]): Promise<void> {
   }
   const workItemType: WorkItemType = (typeFlag as WorkItemType | undefined) ?? "feature";
 
-  // In embedded mode (a minna.project.yaml in cwd), --project can be omitted, matching the
+  // In embedded mode (a local .minna/config.yaml in cwd or a parent), --project can be omitted, matching the
   // documented project-resolution behavior; an explicit --project is used verbatim without
   // central-registry validation (work_items.project is a free-text label, not a resolved key).
   const project = projectFlag ?? (await resolveProjectContext()).key;

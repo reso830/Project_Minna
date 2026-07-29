@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createFeature, initDb, openDb, updateFeatureStatus } from "./core/db.js";
@@ -111,6 +111,89 @@ test("start-feature creates a work item and status reports it", async () => {
   }
 });
 
+test("running a CLI command inside a local project synchronizes its registry entry", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-registry-sync-"));
+  try {
+    await mkdir(join(dir, ".minna"));
+    await writeFile(
+      join(dir, ".minna", "config.yaml"),
+      "version: 1\ncreated_at: 2026-07-29T10:00:00.000Z\ndescription: null\n",
+      "utf8",
+    );
+
+    const result = await runCli(dir, "status");
+    assert.equal(result.exitCode, 0);
+
+    const registry = openDb(join(dir, ".registry-home", ".minna", "projects.db"));
+    try {
+      const project = registry.prepare("SELECT id, name, path FROM projects").get() as { id: string; name: string; path: string };
+      assert.equal(project.id, basename(dir).toLowerCase());
+      assert.equal(project.name, basename(dir));
+      assert.equal(project.path, dir);
+    } finally {
+      registry.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLI synchronization slugifies a local project folder name while preserving its display name", async () => {
+  const root = await mkdtemp(join(tmpdir(), "minna-cli-slug-"));
+  const dir = join(root, "Project Name_UPPER");
+  try {
+    await mkdir(join(dir, ".minna"), { recursive: true });
+    await writeFile(
+      join(dir, ".minna", "config.yaml"),
+      "version: 1\ncreated_at: 2026-07-29T10:00:00.000Z\ndescription: null\n",
+      "utf8",
+    );
+
+    const result = await runCli(dir, "status");
+    assert.equal(result.exitCode, 0);
+
+    const registry = openDb(join(dir, ".registry-home", ".minna", "projects.db"));
+    try {
+      const project = registry.prepare("SELECT id, name FROM projects").get() as { id: string; name: string };
+      assert.equal(project.id, "project-name-upper");
+      assert.equal(project.name, "Project Name_UPPER");
+    } finally {
+      registry.close();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("start-feature accepts an arbitrary --project label without registry resolution", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-verbatim-project-"));
+  try {
+    const created = await runCli(dir, "start-feature", "--project", "unregistered-label", "--title", "Verbatim project");
+    assert.equal(created.exitCode, 0);
+    assert.match(created.stdout, /^Created unregistered-label-verbatim-project-\d+ \| parked \| spec$/m);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("an explicit --project label does not synchronize a conflicting embedded project", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "minna-cli-explicit-project-"));
+  try {
+    await mkdir(join(dir, ".minna"));
+    await writeFile(
+      join(dir, ".minna", "config.yaml"),
+      "version: 1\ncreated_at: 2026-07-29T10:00:00.000Z\ndescription: null\n",
+      "utf8",
+    );
+
+    const created = await runCli(dir, "start-feature", "--project", "other-project", "--title", "Explicit scope");
+    assert.equal(created.exitCode, 0);
+    await assert.rejects(() => access(join(dir, ".registry-home", ".minna", "projects.db")));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("start-feature --type issue defaults to the implement phase", async () => {
   const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-issue-"));
   try {
@@ -192,7 +275,7 @@ test("log and export work for a work item created via start-feature", async () =
   }
 });
 
-test("start-feature resolves the project from minna.project.yaml when --project is omitted", async () => {
+test("start-feature resolves and migrates the project from legacy configuration when --project is omitted", async () => {
   const dir = await mkdtemp(join(tmpdir(), "minna-cli-start-embedded-"));
   try {
     await writeFile(
@@ -203,7 +286,9 @@ test("start-feature resolves the project from minna.project.yaml when --project 
 
     const created = await runCli(dir, "start-feature", "--title", "Embedded item");
     assert.equal(created.exitCode, 0);
-    assert.match(created.stdout, /^Created celia-embedded-item-\d+ \| parked \| spec$/m);
+    assert.match(created.stdout, new RegExp(`^Created ${basename(dir).toLowerCase()}-embedded-item-\\d+ \\| parked \\| spec$`, "m"));
+    await access(join(dir, ".minna", "config.yaml"));
+    await assert.rejects(() => access(join(dir, "minna.project.yaml")));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -251,7 +336,11 @@ async function seedJournal(cwd: string): Promise<void> {
 
 function runCli(cwd: string, ...args: string[]): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cliPath, ...args], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.execPath, [cliPath, ...args], {
+      cwd,
+      env: { ...process.env, MINNA_REGISTRY_HOME: join(cwd, ".registry-home") },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", chunk => { stdout += String(chunk); });

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — Project Creation
+
+- Added the database-backed global project registry (`~/.minna/projects.db`) to track registered and opened project scopes.
+- Added a Next.js server-side endpoint invoking native operating system folder pickers (AppleScript, PowerShell, Zenity) to select directories.
+- Added local project directory validation, scaffolding (`.minna/config.yaml`), and lazy database creation for `.minna/minna.db`.
+- Added a dedicated validation Error Modal to block invalid project imports and prevent auto-repair data corruption.
+- Added project ID collision resolution by slugifying folder names and suffixing duplicate IDs sequentially (e.g., `-2`, `-3`).
+- Added CLI context resolution traversal checks, legacy project configuration migration, and verbatim `--project` flag bypasses.
+
 ## 0.3.0 — Journal View
 
 - Added the Next.js Journal View workspace with a three-panel layout for project navigation, journal timelines, and feature details.

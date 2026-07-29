@@ -9,6 +9,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 beforeEach(() => {
   window.sessionStorage.clear();
+  global.fetch = jest.fn(() => new Promise<Response>(() => {}));
 });
 
 test("persists a selected feature and resolves its decision in session storage", async () => {
@@ -67,12 +68,18 @@ test("renders the three workspace regions", () => {
   expect(screen.getByLabelText("Details")).toBeInTheDocument();
 });
 
-test("opens the prototype's default feature and project on a fresh session", async () => {
+test("loads the first registered project on a fresh session", async () => {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: async () => [
+      { id: "atlas", name: "Atlas", path: "/projects/atlas", last_opened_at: "2026-07-29T09:32:40.000Z", available: true },
+    ],
+  });
   const mountedWorkspace = renderHook(() => useWorkspace(), { wrapper });
 
   await waitFor(() => {
-    expect(mountedWorkspace.result.current.activeFeatureId).toBe("checkout-redesign-001");
-    expect(mountedWorkspace.result.current.expandedProjects["Checkout Redesign"]).toBe(true);
+    expect(mountedWorkspace.result.current.activeProjectId).toBe("atlas");
+    expect(mountedWorkspace.result.current.expandedProjects.atlas).toBe(true);
   });
 });
 

@@ -1,7 +1,9 @@
-project:
-  key: monica
-  name: Project_Monica
-  path: .
-  github: reso830/Project_Monica
-  speckit_dir: .specify
-  default_branch: main
+# Project Minna Target Project Configuration Template
+# Save this file to your target project folder at: <project-root>/.minna/config.yaml
+
+version: 1
+created_at: "2026-07-29T12:00:00Z"
+description: "My Target Project Description"
+speckit_dir: ".specify"
+github: "my-username/my-repo-name"
+default_branch: "main"

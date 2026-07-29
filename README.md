@@ -8,16 +8,16 @@ It is intended to sit beside target project repositories and coordinate Spec Kit
 
 ```text
 Project_Minna/
-  projects.yaml             # Local target project registry, ignored by git
   src/
-    app/                    # Next.js Journal View routes and global styles
-    components/             # Journal workspace UI components
+    app/                    # Next.js App routes and API handlers
+    components/             # UI components (Timeline, Sidebar, ErrorModal)
     adapters/               # Codex, Claude, GitHub integration boundaries
     cli.ts                  # Local operator CLI
-    core/                   # Event journal, work items, project loading
+    core/                   # Registry management, event journal, project loading
     server/
       mcp.ts                # MCP tool surface
-  .minna/                   # Local SQLite event journal (ignored by git)
+  .minna/                   # Local SQLite event journal for this orchestrator (ignored by git)
+  # Central project registry is stored globally at ~/.minna/projects.db
 ```
 
 ## Initial Commands
@@ -62,27 +62,27 @@ building the CLI, run only its compiled unit tests with `npm run test:unit`.
 GitHub Actions runs the build and unit-test commands for pull requests to
 `main` and for pushes to `main`.
 
-## Project Modes
+## Project Resolution & Registry
 
-Minna supports two project resolution modes:
+Minna resolves and scopes project execution context via a two-tier configuration system:
 
-```text
-Central mode:
-  Project_Minna/projects.yaml maps many target projects.
+1. **Global Project Database Registry (`~/.minna/projects.db`)**:
+   Tracks all registered and opened project scopes dynamically (with a read-only projection copy exported to `~/.minna/projects.json` for external inspections).
+2. **Local Project Configuration & Event Journal**:
+   Each tracked project maintains a `.minna/config.yaml` file (for version-controlled static metadata) and a `.minna/minna.db` SQLite event journal (local source of truth for work items, decisions, and feature states).
 
-Embedded mode:
-  TargetProject/minna.project.yaml describes the current project.
-  TargetProject/.minna/ can be a Git submodule pointing at Project_Minna.
-```
+### Context Resolution
 
-In embedded mode, `--project` can be omitted:
+When invoking the CLI inside a directory, Minna automatically walks upwards through parent directories to locate the presence of `.minna/config.yaml` to resolve the current project scope.
+
+Alternatively, developers can specify a free-text project label scope using the `--project <key>` flag verbatim:
 
 ```bash
-cd D:/Alvin/_CodeProjects/Project_Monica
-node .minna/dist/cli.js log
+# Explicit scoping
+npm run start:cli -- status --project project-monica
 ```
 
-Use [minna.project.example.yaml](./minna.project.example.yaml) as the starting point for target projects.
+Use the Add Project interface in the local web application at `http://localhost:3000` to register new project directories dynamically using the native folder picker.
 
 ## Scaffold Gaps
 

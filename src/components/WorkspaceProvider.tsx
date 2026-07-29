@@ -3,24 +3,29 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 
 import { mockEvents, mockFeatures } from "../core/mockData";
-import type { WorkItem, WorkItemEvent } from "../core/types";
+import type { ProjectRegistry, ProjectRegistryEntry, WorkItem, WorkItemEvent } from "../core/types";
+import { ErrorModal } from "./ErrorModal";
 
 type RightTab = "agents" | "md" | "diff";
 type WorkspaceView = "journal" | "board";
 
 interface WorkspaceContextValue {
   activeFeatureId: string | null;
+  activeProjectId: string | null;
   activeRightTab: RightTab;
   activeView: WorkspaceView;
   expandedProjects: Record<string, boolean>;
   expandedAgents: Record<string, boolean>;
   features: WorkItem[];
+  projects: ProjectRegistry;
   events: Record<string, WorkItemEvent[]>;
   resolvedDecisions: Record<string, Record<string, string>>;
   selectFeature: (featureId: string) => void;
   setRightTab: (tab: RightTab) => void;
   toggleWorkspaceView: () => void;
   toggleProject: (projectName: string) => void;
+  addProject: () => Promise<void>;
+  openProject: (projectId: string) => Promise<void>;
   toggleAgent: (agentId: string) => void;
   submitReply: (featureId: string, text: string) => void;
   submitDecision: (featureId: string, decisionId: string, option: string) => void;
@@ -28,8 +33,6 @@ interface WorkspaceContextValue {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 const defaultFeatureId = mockFeatures[0]?.id ?? null;
-const defaultProjectName = mockFeatures[0]?.project;
-const defaultExpandedProjects = defaultProjectName ? { [defaultProjectName]: true } : {};
 const defaultExpandedAgents = defaultFeatureId ? { [`${defaultFeatureId}-agent-1`]: true } : {};
 
 const cloneEvents = (): Record<string, WorkItemEvent[]> =>
@@ -44,15 +47,30 @@ const readJson = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const sortProjects = (projects: ProjectRegistry): ProjectRegistry =>
+  [...projects].sort((left, right) => right.last_opened_at.localeCompare(left.last_opened_at) || left.id.localeCompare(right.id));
+
+const isProject = (value: unknown): value is ProjectRegistryEntry => {
+  if (typeof value !== "object" || value === null) return false;
+  const project = value as Partial<ProjectRegistryEntry>;
+  return typeof project.id === "string"
+    && typeof project.name === "string"
+    && typeof project.path === "string"
+    && typeof project.last_opened_at === "string";
+};
+
 export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(defaultFeatureId);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<RightTab>("agents");
   const [activeView, setActiveView] = useState<WorkspaceView>("journal");
-  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>(defaultExpandedProjects);
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   const [expandedAgents, setExpandedAgents] = useState<Record<string, boolean>>(defaultExpandedAgents);
   const [features, setFeatures] = useState<WorkItem[]>(() => [...mockFeatures]);
+  const [projects, setProjects] = useState<ProjectRegistry>([]);
   const [events, setEvents] = useState<Record<string, WorkItemEvent[]>>(cloneEvents);
   const [resolvedDecisions, setResolvedDecisions] = useState<Record<string, Record<string, string>>>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     const storedFeatureId = window.sessionStorage.getItem("minna_active_feature_id");
@@ -64,14 +82,6 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     if (storedTab === "agents" || storedTab === "md" || storedTab === "diff") {
       setActiveRightTab(storedTab);
     }
-
-    const projectState = Object.fromEntries(
-      [...new Set(mockFeatures.map((feature) => feature.project))].map((project) => [
-        project,
-        readJson(`minna_project_expanded_${project}`, project === defaultProjectName),
-      ]),
-    );
-    setExpandedProjects(projectState);
 
     const agentState: Record<string, boolean> = { ...defaultExpandedAgents };
     for (const key of Array.from({ length: window.sessionStorage.length }, (_, index) => window.sessionStorage.key(index))) {
@@ -99,19 +109,43 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
           : feature,
       ),
     );
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/projects");
+        if (!response.ok) return;
+        const data: unknown = await response.json();
+        if (!Array.isArray(data) || !data.every(isProject)) return;
+
+        const loadedProjects = sortProjects(data);
+        setProjects(loadedProjects);
+        setActiveProjectId((current) => current ?? loadedProjects[0]?.id ?? null);
+        setExpandedProjects(Object.fromEntries(loadedProjects.map((project, index) => [
+          project.id,
+          readJson(`minna_project_expanded_${project.id}`, index === 0),
+        ])));
+      } catch {
+        // The prototype remains usable when the local registry is unavailable.
+      }
+    })();
   }, []);
 
   const value = useMemo<WorkspaceContextValue>(() => ({
     activeFeatureId,
+    activeProjectId,
     activeRightTab,
     activeView,
     expandedProjects,
     expandedAgents,
     features,
+    projects,
     events,
     resolvedDecisions,
     selectFeature: (featureId) => {
       setActiveFeatureId(featureId);
+      const projectName = features.find((feature) => feature.id === featureId)?.project;
+      const project = projects.find((candidate) => candidate.name === projectName);
+      if (project) setActiveProjectId(project.id);
       setActiveView("journal");
       window.sessionStorage.setItem("minna_active_feature_id", featureId);
     },
@@ -122,12 +156,62 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     toggleWorkspaceView: () => {
       setActiveView((current) => current === "board" ? "journal" : "board");
     },
-    toggleProject: (projectName) => {
+    toggleProject: (projectId) => {
       setExpandedProjects((current) => {
-        const next = { ...current, [projectName]: !current[projectName] };
-        window.sessionStorage.setItem(`minna_project_expanded_${projectName}`, JSON.stringify(next[projectName]));
+        const next = { ...current, [projectId]: !current[projectId] };
+        window.sessionStorage.setItem(`minna_project_expanded_${projectId}`, JSON.stringify(next[projectId]));
         return next;
       });
+    },
+    addProject: async () => {
+      try {
+        const pickerResponse = await fetch("/api/projects/pick", { method: "POST" });
+        if (!pickerResponse.ok) return;
+        const pickerData: unknown = await pickerResponse.json();
+        if (typeof (pickerData as { path?: unknown }).path !== "string") return;
+
+        const addResponse = await fetch("/api/projects/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: (pickerData as { path: string }).path }),
+        });
+        if (!addResponse.ok) {
+          const errorData: unknown = await addResponse.json().catch(() => null);
+          const details = (errorData as { details?: unknown })?.details;
+          setValidationError(typeof details === "string" ? details : "The selected project could not be added.");
+          return;
+        }
+        const addData: unknown = await addResponse.json();
+        const project = (addData as { project?: unknown }).project;
+        if (!isProject(project)) return;
+
+        setProjects((current) => sortProjects([project, ...current.filter((candidate) => candidate.id !== project.id)]));
+        setActiveProjectId(project.id);
+        setExpandedProjects((current) => ({ ...current, [project.id]: true }));
+      } catch {
+        // Validation and picker errors are presented by the Phase 04 error flow.
+      }
+    },
+    openProject: async (projectId) => {
+      const currentProject = projects.find((project) => project.id === projectId);
+      if (!currentProject?.available) return;
+
+      try {
+        const response = await fetch("/api/projects/open", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: projectId }),
+        });
+        if (!response.ok) return;
+        const data: unknown = await response.json();
+        const project = (data as { project?: unknown }).project;
+        if (!isProject(project)) return;
+
+        setProjects((current) => sortProjects([project, ...current.filter((candidate) => candidate.id !== project.id)]));
+        setActiveProjectId(project.id);
+      } catch {
+        // A failed switch leaves the current project state unchanged.
+      }
     },
     toggleAgent: (agentId) => {
       setExpandedAgents((current) => {
@@ -180,9 +264,14 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       const replies = readJson<WorkItemEvent[]>(`minna_replies_${featureId}`, []);
       window.sessionStorage.setItem(`minna_replies_${featureId}`, JSON.stringify([...replies, confirmation]));
     },
-  }), [activeFeatureId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, resolvedDecisions]);
+  }), [activeFeatureId, activeProjectId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, projects, resolvedDecisions]);
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  return (
+    <WorkspaceContext.Provider value={value}>
+      {children}
+      {validationError && <ErrorModal details={validationError} onDismiss={() => setValidationError(null)} />}
+    </WorkspaceContext.Provider>
+  );
 }
 
 export function useWorkspace(): WorkspaceContextValue {

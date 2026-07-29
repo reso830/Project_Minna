@@ -13,13 +13,16 @@ function featureNumber(id: string): string {
 export function Sidebar() {
   const {
     activeFeatureId,
+    activeProjectId,
+    addProject,
     expandedProjects,
     features,
+    openProject,
+    projects,
     selectFeature,
     toggleProject,
     toggleWorkspaceView,
   } = useWorkspace();
-  const projects = [...new Set(features.map((feature) => feature.project))];
 
   return (
     <div className="sidebar">
@@ -36,30 +39,34 @@ export function Sidebar() {
 
       <div className="sidebar-projects-heading">
         <span>Projects</span>
-        <button aria-label="Add project" className="sidebar-icon-button sidebar-add-project" type="button"><PlusIcon /></button>
+        <button aria-label="Add project" className="sidebar-icon-button sidebar-add-project" onClick={() => void addProject()} type="button"><PlusIcon /></button>
       </div>
 
       <nav aria-label="Projects" className="sidebar-projects">
         {projects.map((project) => {
-          const isExpanded = expandedProjects[project] ?? false;
-          const projectFeatures = features.filter((feature) => feature.project === project);
+          const isExpanded = expandedProjects[project.id] ?? false;
+          const projectFeatures = features.filter((feature) => feature.project === project.name);
           const hasBlockedChild = !isExpanded && projectFeatures.some((feature) => feature.state === "blocked");
-          const hasSelectedFeature = projectFeatures.some((feature) => feature.id === activeFeatureId);
+          const isSelected = activeProjectId === project.id || projectFeatures.some((feature) => feature.id === activeFeatureId);
 
           return (
-            <div className="sidebar-project" key={project}>
-              <div className={`sidebar-project-row${hasBlockedChild ? " sidebar-project-row--blocked" : ""}${hasSelectedFeature ? " sidebar-project-row--selected" : ""}`}>
+            <div className="sidebar-project" key={project.id}>
+              <div className={`sidebar-project-row${hasBlockedChild ? " sidebar-project-row--blocked" : ""}${isSelected ? " sidebar-project-row--selected" : ""}${project.available === false ? " sidebar-project-row--unavailable" : ""}`}>
                 <button
                   aria-expanded={isExpanded}
-                  className={`sidebar-project-toggle${hasBlockedChild ? " sidebar-project-toggle--blocked" : ""}${hasSelectedFeature ? " sidebar-project-toggle--selected" : ""}`}
-                  onClick={() => toggleProject(project)}
+                  className={`sidebar-project-toggle${hasBlockedChild ? " sidebar-project-toggle--blocked" : ""}${isSelected ? " sidebar-project-toggle--selected" : ""}${project.available === false ? " sidebar-project-toggle--unavailable" : ""}`}
+                  disabled={project.available === false}
+                  onClick={() => {
+                    toggleProject(project.id);
+                    if (project.id !== activeProjectId) void openProject(project.id);
+                  }}
                   type="button"
                 >
                   <span aria-hidden="true" className="sidebar-chevron"><ChevronIcon direction={isExpanded ? "down" : "right"} /></span>
-                  <span>{project}</span>
+                  <span>{project.name}</span>
                 </button>
                 <button
-                  aria-label={`Add feature to ${project}`}
+                  aria-label={`Add feature to ${project.name}`}
                   className="sidebar-add-feature"
                   onClick={(event) => event.stopPropagation()}
                   type="button"
@@ -69,7 +76,7 @@ export function Sidebar() {
               </div>
               {isExpanded && (
                 <div className="sidebar-feature-list">
-                  {projectFeatures.map((feature) => (
+                  {projectFeatures.length === 0 ? <span className="sidebar-empty-project">No features found</span> : projectFeatures.map((feature) => (
                     <button
                       aria-pressed={activeFeatureId === feature.id}
                       aria-label={`${feature.title}, ${feature.state}`}
