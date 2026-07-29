@@ -184,7 +184,7 @@ For Minna's actual surface, examples include:
 * Journal export producing a committed, human-readable timeline
 
 Smoke tests should remain lightweight, repeatable, and practical to execute. Minna
-has no browser surface; tests are CLI invocations, journal-state assertions, and
+supports both browser-based surfaces and CLI interfaces; tests are browser smoke tests, CLI invocations, journal-state assertions, and
 git-state assertions.
 
 ---
@@ -375,12 +375,13 @@ The following are law but flagged for revisit as evidence accrues:
 
 ---
 
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Ratified:** 2026-06-17
-**Last Amended:** 2026-07-16
+**Last Amended:** 2026-07-29
 
 ### Amendment log
 
+* **1.2.1 (2026-07-29)** — Amended IX (Workflow Smoke Testing) to acknowledge Minna's browser surface and permit browser-based smoke tests.
 * **1.2.0 (2026-07-16)** — Grafted the M0 findings-contract spike results into the
   constitution. Amended II (no state from freeform text), III (event-journal
   mechanism), V (subprocess corollary), VI (SQLite-plus-export replaces file-backed),
