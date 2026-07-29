@@ -1,6 +1,6 @@
-# API Contract: Project Creation
+# API Contract: Project Creation & Management
 
-This document outlines the REST API contracts between the frontend Next.js application and the Next.js server-side API routes for Feature 002 - Project Creation.
+This document outlines the REST API contracts between the frontend Next.js application and the Next.js server-side API routes for Feature 002 - Project Creation & Management.
 
 ## Endpoints
 
@@ -13,9 +13,9 @@ Get the array of all registered projects sorted by `last_opened_at` descending.
 * **Headers**:
   * `Content-Type: application/json`
 * **Response (200 OK)**:
-  - `name` preserves the exact folder casing on disk.
-  - `id` is the slugified, lowercased version of `name`.
-  - `available` indicates if the absolute path currently resolves on disk.
+  - `name` preserves the exact folder casing on disk (or updated display name).
+  - `id` is the slugified, lowercased version of `name` generated on addition.
+  - `available` indicates if the absolute path currently resolves on disk AND contains a valid `.minna/config.yaml`.
   ```json
   [
     {
@@ -148,10 +148,89 @@ Switches context to an already registered project. Updates its `last_opened_at` 
   }
   ```
 * **Response (410 Gone)**:
-  Returned if the registered project's path no longer resolves on disk.
+  Returned if the registered project's path no longer resolves on disk or lacks a valid config.yaml file.
   ```json
   {
     "error": "Project Unavailable",
-    "details": "The project path '/home/user/projects/Checkout_Redesign' no longer exists."
+    "details": "The project path '/home/user/projects/Checkout_Redesign' no longer exists or lacks a valid config.yaml file."
+  }
+  ```
+
+---
+
+### 5. Edit Project (Rename / Relocate)
+
+Renames the project's display name and/or relocates the folder path. When relocating, validations are executed on the target directory path immediately.
+
+* **URL**: `/api/projects/edit`
+* **Method**: `POST`
+* **Headers**:
+  * `Content-Type: application/json`
+* **Request Body**:
+  ```json
+  {
+    "id": "checkout-redesign",
+    "name": "Checkout_Redesign_V2",
+    "path": "/home/user/projects/Checkout_Redesign_V2"
+  }
+  ```
+* **Response (200 OK)**:
+  ```json
+  {
+    "success": true,
+    "project": {
+      "id": "checkout-redesign",
+      "name": "Checkout_Redesign_V2",
+      "path": "/home/user/projects/Checkout_Redesign_V2",
+      "last_opened_at": "2026-07-29T10:20:00.000Z"
+    }
+  }
+  ```
+* **Response (400 Bad Request)**:
+  Returned if the relocated folder lacks a valid `.minna/config.yaml` file (or lacks a `.minna` directory entirely). Relocation is aborted.
+  ```json
+  {
+    "error": "Validation Failure",
+    "details": "The new project directory '/home/user/projects/Checkout_Redesign_V2' does not contain a valid '.minna/config.yaml' file. Relocation aborted."
+  }
+  ```
+  Or returned if the relocated path is already registered under another project ID:
+  ```json
+  {
+    "error": "Validation Failure",
+    "details": "This directory is already registered as project '<existing_project_name>'."
+  }
+  ```
+* **Response (404 Not Found)**:
+  Returned if the project `id` is not registered.
+
+---
+
+### 6. Remove Project
+
+Deregisters the project from the central project registry database. Does not alter or delete files on disk.
+
+* **URL**: `/api/projects/remove`
+* **Method**: `POST`
+* **Headers**:
+  * `Content-Type: application/json`
+* **Request Body**:
+  ```json
+  {
+    "id": "checkout-redesign"
+  }
+  ```
+* **Response (200 OK)**:
+  ```json
+  {
+    "success": true
+  }
+  ```
+* **Response (404 Not Found)**:
+  Returned if the project `id` is not registered.
+  ```json
+  {
+    "error": "Not Found",
+    "details": "No project registered with ID 'checkout-redesign'."
   }
   ```

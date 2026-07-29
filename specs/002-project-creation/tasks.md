@@ -1,10 +1,10 @@
-# Tasks: Project Creation
+# Tasks: Project Creation & Management
 
 ## Conventions Header
 
 - **Status Legend**: `[x]` done · `[ ]` pending · `[~]` skipped
 - **Parallel Execution**: Tasks marked `[P]` can run in parallel (different files, no shared edits)
-- **Phase Dependency**: `01 → 02 → 03 → 04 → 05 → 06 → 07`
+- **Phase Dependency**: `01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 10`
 - **Verification Commands**:
   - `npm run test` (compiles and runs CLI/unit/UI tests)
   - `npm run dev` (spins up Next.js server for manual check)
@@ -18,8 +18,11 @@
 | **03** | Onboarding & Picker UI | `T007–T011` | US1, US2 |
 | **04** | Rejection & Error Modal | `T012–T013` | US3 |
 | **05** | ID Collisions & CLI Sync | `T014–T017` | US4, US5 |
-| **06** | Release Prep | `T018–T021` | — |
-| **07** | Browser Smoke Test | `T022` | US1, US2, US3, US4, US5 |
+| **06** | Release Prep (Initial) | `T018–T021` | — |
+| **07** | Initial Smoke Test | `T022` | US1, US2, US3, US4, US5 |
+| **08** | Project Management Core Backend | `T023–T027` | US6, US7, US8 |
+| **09** | Project Management UI & Modals | `T028–T032` | US6, US7, US8 |
+| **10** | E2E Amendment Smoke Test & Release | `T033–T034` | US6, US7, US8 |
 
 ---
 
@@ -191,7 +194,7 @@
 
 ---
 
-## Phase 06: Release Prep
+## Phase 06: Release Prep (Initial)
 
 **Purpose**: Execute final packaging tasks, version bumps, and documentation reviews.
 
@@ -221,18 +224,138 @@
 
 ---
 
-## Phase 07: Browser Smoke Test
+## Phase 07: Initial Smoke Test
 
-**Purpose**: Execute manual browser checks against the final release build.
+**Purpose**: Execute manual browser checks against the initial release build.
 
-- [ ] **T022** **E2E Browser Verification**
+- [x] **T022** **E2E Browser Verification**
   * **Target Component**: Whole application workspace
   * **Expected Behavior**: Build project (`npm run build`), run development mode (`npm run dev`), open the browser, and verify:
     1. Click sidebar "+" button, pick folder, and assert it scaffolds configuration and lists correctly. Check that `.minna/minna.db` local event database gets initialized correctly.
     2. Add project with existing `.minna` directory and verify it imports without file overrides. Verify lazy DB creation works if `minna.db` was deleted before open.
-    3. Choose directory with corrupt/missing configurations and verify the validation error modal shows up and locks interactions (compare visually against design reference at [error_modal_mockup.jpg](file:///D:/Alvin/_CodeProjects/Project_Minna/specs/002-project-creation/design/error_modal_mockup.jpg)).
+    3. Choose directory with corrupt/missing configurations and verify the validation error modal shows up and locks interactions.
     4. Register two distinct folders with same name and check that `~/.minna/projects.db` yields unique suffixed IDs, preserving casing for names and lowercasing slugs for IDs.
-    5. Check that projects with zero features render empty sublists in the sidebar correctly (compare visually against design reference at [sidebar_project_states_mockup.jpg](file:///D:/Alvin/_CodeProjects/Project_Minna/specs/002-project-creation/design/sidebar_project_states_mockup.jpg)).
+    5. Check that projects with zero features render empty sublists in the sidebar correctly.
     6. Mock an unavailable directory path, refresh browser, and verify the project displays as muted/disabled.
     7. Run CLI status command inside project folder and assert `last_opened_at` changes in `~/.minna/projects.db`.
-  * **Validation/Test Location**: Assert all Independent Tests for US1, US2, US3, US4, and US5 pass.
+
+---
+
+## Phase 08: Project Management Core Backend (Priority: P1)
+
+**Purpose**: Build the database update, relocation, and deletion functions in the backend registry, along with ongoing health check query validations.
+
+- [ ] **T023** **Update and Remove SQLite Registry Actions**
+  * **Target File**: `src/core/registry.ts`
+  * **Expected Behavior**: Implement `updateProject(id, name, path)` and `removeProject(id)` in database transactions using `BEGIN IMMEDIATE TRANSACTION`.
+    - `updateProject` validates that the new `path` is not already registered under another project ID (relocate collision validation). If it is already registered, throws an error (relocation collision) to be returned as `400 Bad Request`.
+    - `updateProject` records event type `project.renamed` (if name changed) and/or `project.relocated` (if path changed) in the `events` table (payload: `{"id", "name", "path"}`), and updates current projection columns.
+    - `removeProject` deletes the projection row matching the `id` from the `projects` table and records event type `project.removed` (payload: exactly `{"id"}`).
+    - Automatically exports current projects projection to `~/.minna/projects.json` and registry events history to `~/.minna/registry-events.json` on write.
+  * **Constraints**: Ensure the project `id` is treated as immutable and is never changed during updates.
+
+- [ ] **T024** **Unified Ongoing Project Health Checks & Lazy Repairs**
+  * **Target Files**:
+    - `src/core/registry.ts`
+  * **Expected Behavior**: Export a unified helper `verifyProjectHealth(projectPath): { available: boolean; error?: string }` in `registry.ts` checking folder existence and `.minna/config.yaml` schema validity (does not mutate disk files or check `minna.db` presence, since database is lazily created on open).
+  * **Constraints**:
+    - All path checking inside Next.js APIs (e.g. `route.ts`, `open/route.ts`) and CLI context startup must use this single helper, eliminating duplicate inline checks.
+    - Update `POST /api/projects/open` and CLI context startup to invoke `prepareProject(projectPath)` to handle lazy SQLite database recreation on open (self-healing missing `minna.db` files).
+
+- [ ] **T025** **Registry Management Unit Tests**
+  * **Target File**: `src/core/registry.test.ts`
+  * **Expected Behavior**: Write unit tests for the new database operations:
+    - Assert `updateProject` transactionally records renamed/relocated events and updates current projection columns while keeping `id` identical.
+    - Assert `updateProject` rejects relocation to an already-registered path, throwing validation errors.
+    - Assert `removeProject` deletes projects from projections and records `project.removed` events, leaving the folder and files on disk untouched.
+    - Assert ongoing health checks return `available: false` if a project path is deleted, config.yaml is deleted, or config.yaml is modified to contain invalid YAML or invalid timestamps.
+    - Assert that opening a project with missing `.minna/minna.db` successfully triggers lazy database table creation.
+  * **Validation/Test Location**: Run `npm run test` to verify unit tests pass.
+
+- [ ] **T026** **Update & Remove API Integration Endpoints**
+  * **Target Files**:
+    - `src/app/api/projects/edit/route.ts` (New file)
+    - `src/app/api/projects/remove/route.ts` (New file)
+  * **Expected Behavior**:
+    - `/api/projects/edit` accepts `{ id, name, path }`, immediately executes configuration health validations at the relocated `path` (aborting and returning `400` validation errors with Error Modal signals if missing/invalid, or if the path is already registered under another project), and updates the registry.
+    - `/api/projects/remove` accepts `{ id }` and deregisters the project.
+  * **Validation/Test Location**: Tested in T027.
+
+- [ ] **T027** **API Management Endpoint Tests**
+  * **Target File**: `src/app/api/projects/__tests__/projects.test.ts`
+  * **Expected Behavior**: Write integration tests for new endpoints, verifying relocation validation error branches, duplicate path relocations rejection, and clean deregistrations.
+  * **Validation/Test Location**: Run `npm run test:ui` (or `npm run test`) to verify.
+
+---
+
+## Phase 09: Project Management UI & Modals (Priority: P1)
+
+**Goal**: Implement the popovers, action choices, and double confirm overlays matching the project management design reference layouts.
+
+- [ ] **T028** **Project Ellipsis Hover Menu & Popover**
+  * **Target Files**:
+    - `src/components/Sidebar.tsx`
+  * **Expected Behavior**: Render an actions menu button (Feather-style ellipsis `icon-ellipsis` or vertical/horizontal ellipsis) on project row mouse hover. Clicking it displays a popover menu anchored to the ellipsis with options **Edit Project** and **Remove Project**. Clicking outside dismisses the popover.
+  * **Constraints**: Keep popovers properly aligned.
+
+- [ ] **T029** **Edit Project Modal Component**
+  * **Target File**: `src/components/EditProjectModal.tsx` (New file)
+  * **Expected Behavior**: Create the Edit Project modal dialog in the light card style.
+    - Title: "Edit Project".
+    - Rename text input prefilled with current display name.
+    - Read-only current path display, alongside a "Select project directory" picker button that launches the folder picker API. Relocating immediately validates the path, showing the Error Modal if invalid or already registered.
+    - Red left-aligned "Remove Project" button.
+    - Save button, disabled until name or folder differs from saved values.
+    - Cancel button. If changes exist, triggers the Discard changes modal.
+
+- [ ] **T030** **Remove Confirm Modal Component**
+  * **Target File**: `src/components/RemoveConfirmModal.tsx` (New file)
+  * **Expected Behavior**: Create the Remove Project confirmation overlay in the light card style.
+    - Title: "Remove '{project name}'?".
+    - Warning text: "This removes the project from Minna. Your project files on disk won't be affected." (Do not use prototype's destructive copy).
+    - Footer CTAs: Cancel, Remove Project (red, destructive).
+
+- [ ] **T031a** **Discard changes Confirm Modal Component**
+  * **Target File**: `src/components/DiscardConfirmModal.tsx` (New file)
+  * **Expected Behavior**: Create the Discard changes confirmation overlay.
+    - Title: "Discard changes?".
+    - Prompt: "You have unsaved changes. Are you sure you want to discard them?".
+    - Footer CTAs: Keep Editing, Discard.
+
+- [ ] **T031b** **UI Component Unit Tests**
+  * **Target Files**:
+    - `src/components/__tests__/EditProjectModal.test.tsx` (New file)
+  * **Expected Behavior**: Write unit/integration tests verifying the actions menu popover triggers (dismiss-on-outside-click), the Edit Modal form layout (Save button disabled status, picker callback validation), Discard confirm triggers, and Remove modal confirmation buttons.
+
+- [ ] **T032** **UI Modals Orchestration & Provider Integration**
+  * **Target Files**:
+    - `src/components/Sidebar.tsx`
+    - `src/components/WorkspaceProvider.tsx`
+  * **Expected Behavior**: Wire the open, edit, remove, save, cancel, and double confirmation modals triggers in the provider context state, displaying overlays, locking background clicks, and reloading workspace context correctly.
+  * **Validation/Test Location**: Run `npm run dev` and manual review.
+
+---
+
+## Phase 10: E2E Amendment Smoke Test & Release
+
+**Purpose**: Execute final manual smoke tests on the update/delete amendment features, update changelogs, and bump roadmap status.
+
+- [ ] **T033** **E2E Project Management Verification**
+  * **Target Component**: Whole application workspace
+  * **Expected Behavior**: Run development mode and manually verify:
+    1. Hover row, select Edit Project from actions menu, edit name, click Save, and check display name changes in the sidebar.
+    2. Click Select project directory in Edit Modal, choose a valid relocated directory, Save, and verify path changes. Relocate to an invalid folder and verify the Error Modal appears and aborts saving. Relocate to an already-registered path and verify the duplicate path Error Modal appears and aborts.
+    3. Click Cancel with dirty changes, verify Discard changes modal is displayed, click Discard, and verify modal closes and registry remains unchanged.
+    4. Click Remove Project, verify confirmation warning is shown, confirm, and verify project disappears from the sidebar. Verify the folder and files on disk are completely untouched. If removing the currently active project, verify that the active project context is updated to `null` (unselected) and the UI renders the empty screen/default dashboard state.
+    5. Delete `config.yaml` from a registered project on disk, reload, and verify the project displays as muted/unavailable in the sidebar. Delete `minna.db` from a healthy project on disk, reload, verify it displays as available in the sidebar, open it, and verify that `minna.db` self-heals by initializing database tables.
+    6. Check that all mutations write events to `registry-events.json` in the home `.minna` directory.
+
+- [ ] **T034** **Changelog and Roadmap Bump**
+  * **Target Files**:
+    - `CHANGELOG.md`
+    - `docs/feature_roadmap.md`
+    - [package.json](file:///D:/Alvin/_CodeProjects/Project_Minna/package.json)
+    - `package-lock.json`
+    - `docs/minna-project-registry.md`
+    - `specs/002-project-creation/quickstart.md`
+  * **Expected Behavior**: Record amendment releases in CHANGELOG, update Feature 002 roadmap status in `docs/feature_roadmap.md` to `Completed` for release `0.5.0`, update registry documentation in `docs/minna-project-registry.md` to reflect edit/remove events, update `quickstart.md` to describe Project Management operations, and bump version to `0.5.0` in package.json/package-lock.json.

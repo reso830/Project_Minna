@@ -6,7 +6,7 @@ Use this checklist to verify that the implementation plan aligns with the specif
 
 - [x] **Scope Alignment**
   - [x] Does the plan cover the complete Add Project flow from UI trigger, folder picker, validation, database registry updates, to project loading?
-  - [x] Are all spec-defined non-goals (e.g. no renaming, no git integration, no cloud sync) respected?
+  - [x] Are all spec-defined non-goals (e.g. no project deletion on disk, no remote syncing) respected?
   - [x] Does the plan limit CLI integration only to updating `last_opened_at` inside `~/.minna/projects.db` using database write locks?
   - [x] Does the plan remove legacy central resolution dead code (referencing `projects.yaml`) in `project-context.ts`?
   - [x] Does the plan scaffold the local project event database `.minna/minna.db` alongside the config files?
@@ -43,6 +43,14 @@ Use this checklist to verify that the implementation plan aligns with the specif
   - [x] Are there test tasks for detecting unavailable projects on disk and muting/disabling their sidebar rows?
 
 - [x] **Constitution Compliance**
-  - [x] Are there zero new npm dependencies introduced?
+  - [x] Are there zero new runtime npm dependencies introduced?
   - [x] Is the schema validation centralized and shared across targets?
   - [x] Is the project registry backed by SQLite event journal (`~/.minna/projects.db`) to comply with Principle III and VI?
+
+- [x] **Amendment Scope (Update/Delete/Health Check)**
+  - [x] Are all new functional goals (Rename, Relocate, Remove, Load-time Health Checks) covered?
+  - [x] Does relocation validation reject paths lacking a valid `.minna/config.yaml` using the validation Error Modal, without falling back to scaffolding?
+  - [x] Is project removal registry-only, leaving disk files and work items untouched?
+  - [x] Does list querying verify both directory existence and `.minna/config.yaml` schema validity before returning availability?
+  - [x] Are `project.renamed`, `project.relocated`, and `project.removed` events written inside write transactions?
+  - [x] Is the full registry event log exported to `~/.minna/registry-events.json` on transaction commit?

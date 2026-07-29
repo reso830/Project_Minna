@@ -21,9 +21,9 @@ Projects are represented by an existing folder on disk. Minna determines whether
 ## Objectives
 
 - Allow users to add projects through a single workflow.
-- Detect existing Minna projects.
+- Detect existing Minna projects and perform ongoing health checks on load.
 - Scaffold new Minna projects.
-- Maintain the global project registry.
+- Maintain the global project registry with update (rename/relocate) and delete (remove from registry) operations.
 - Open projects after successful validation or initialization.
 - Establish the persistence foundation for future features.
 
@@ -38,14 +38,15 @@ Projects are represented by an existing folder on disk. Minna determines whether
 - Project detection
 - Project scaffolding
 - Project validation
-- Project registry management
+- Project registry management (Create, Read, Update, Delete)
 - Recent Projects
 - Project switching
+- Ongoing project health check on load
+- Project editing (Rename display name, relocate directory path)
+- Project removal (Deregister from central registry)
 
 ### Excluded
 
-- Project rename
-- Project settings
 - Feature creation
 - Feature management
 - Agent execution
@@ -91,11 +92,9 @@ If the `.minna/` directory exists but `.minna/config.yaml` is missing or invalid
 
 ### Project Naming
 
-The project name is derived from the selected folder name.
+The project name is initially derived from the selected folder name.
 
-Users are not prompted to enter a project name during this workflow.
-
-Project renaming is a future feature and is explicitly out of scope.
+Users are not prompted to enter a project name during the initial Add Project workflow, but they can subsequently rename the project display name using the Edit Project modal in the UI settings. Renaming is written to the global project database registry.
 
 ---
 
@@ -161,6 +160,22 @@ Existing project data must never be overwritten or re-scaffolded automatically.
 
 ---
 
+### Project Update & Delete
+
+Operators can update project metadata or remove projects from the workspace:
+- **Project Rename**: Changes the display name registered in the central project database. No local project files are edited.
+- **Project Relocate**: Changes the registered path of a project to a new directory selected via the native OS picker. Minna immediately validates that the new path contains a valid `.minna/config.yaml`. If not, relocation is aborted and the validation Error Modal is displayed. Relocation does not fall back to scaffolding new configurations.
+- **Project Removal**: Deregisters the project by deleting the project row from the registry database projection and recording a removal event. Work items, their local database journals, and all files on disk are completely untouched.
+
+### Project Health Checks
+
+Minna performs ongoing health checks when listing projects (such as loading the sidebar):
+- Verifies that the registered project path exists on disk.
+- Verifies that `.minna/config.yaml` exists and is valid.
+- If either check fails, the project is marked unavailable (`available: false`) and rendered as disabled and muted in the UI.
+
+---
+
 ### Recent Projects
 
 The Recent Projects list is derived directly from the global project registry.
@@ -204,6 +219,10 @@ The project configuration file (`.minna/config.yaml`) and the global project dat
 - `last_opened_at` is updated every time a project is opened.
 - Invalid project structures or configuration files are rejected with a clear error message.
 - The Recent Projects list is populated directly from the global project registry and sorted by `last_opened_at`.
+- Operators can rename projects (modifying the registered display name) without altering local project configuration or source files.
+- Operators can relocate project paths via the native picker, validating the new directory's config.yaml. Missing or invalid configs abort the relocation.
+- Operators can remove projects from the registry, which deletes their record from the projects projection table and records a removal event. The folder and its contents on disk are untouched.
+- Projects undergo ongoing health checks on load, rendering as unavailable (disabled and muted) if the path does not exist or the configuration file is invalid or missing.
 - The feature operates entirely offline.
 - No AI services, Git integration, or remote backend services are required.
 
