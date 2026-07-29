@@ -245,7 +245,7 @@
 
 **Purpose**: Build the database update, relocation, and deletion functions in the backend registry, along with ongoing health check query validations.
 
-- [ ] **T023** **Update and Remove SQLite Registry Actions**
+- [x] **T023** **Update and Remove SQLite Registry Actions**
   * **Target File**: `src/core/registry.ts`
   * **Expected Behavior**: Implement `updateProject(id, name, path)` and `removeProject(id)` in database transactions using `BEGIN IMMEDIATE TRANSACTION`.
     - `updateProject` validates that the new `path` is not already registered under another project ID (relocate collision validation). If it is already registered, throws an error (relocation collision) to be returned as `400 Bad Request`.
@@ -254,7 +254,7 @@
     - Automatically exports current projects projection to `~/.minna/projects.json` and registry events history to `~/.minna/registry-events.json` on write.
   * **Constraints**: Ensure the project `id` is treated as immutable and is never changed during updates.
 
-- [ ] **T024** **Unified Ongoing Project Health Checks & Lazy Repairs**
+- [x] **T024** **Unified Ongoing Project Health Checks & Lazy Repairs**
   * **Target Files**:
     - `src/core/registry.ts`
   * **Expected Behavior**: Export a unified helper `verifyProjectHealth(projectPath): { available: boolean; error?: string }` in `registry.ts` checking folder existence and `.minna/config.yaml` schema validity (does not mutate disk files or check `minna.db` presence, since database is lazily created on open).
@@ -262,7 +262,7 @@
     - All path checking inside Next.js APIs (e.g. `route.ts`, `open/route.ts`) and CLI context startup must use this single helper, eliminating duplicate inline checks.
     - Update `POST /api/projects/open` and CLI context startup to invoke `prepareProject(projectPath)` to handle lazy SQLite database recreation on open (self-healing missing `minna.db` files).
 
-- [ ] **T025** **Registry Management Unit Tests**
+- [x] **T025** **Registry Management Unit Tests**
   * **Target File**: `src/core/registry.test.ts`
   * **Expected Behavior**: Write unit tests for the new database operations:
     - Assert `updateProject` transactionally records renamed/relocated events and updates current projection columns while keeping `id` identical.
@@ -272,7 +272,7 @@
     - Assert that opening a project with missing `.minna/minna.db` successfully triggers lazy database table creation.
   * **Validation/Test Location**: Run `npm run test` to verify unit tests pass.
 
-- [ ] **T026** **Update & Remove API Integration Endpoints**
+- [x] **T026** **Update & Remove API Integration Endpoints**
   * **Target Files**:
     - `src/app/api/projects/edit/route.ts` (New file)
     - `src/app/api/projects/remove/route.ts` (New file)
@@ -281,7 +281,7 @@
     - `/api/projects/remove` accepts `{ id }` and deregisters the project.
   * **Validation/Test Location**: Tested in T027.
 
-- [ ] **T027** **API Management Endpoint Tests**
+- [x] **T027** **API Management Endpoint Tests**
   * **Target File**: `src/app/api/projects/__tests__/projects.test.ts`
   * **Expected Behavior**: Write integration tests for new endpoints, verifying relocation validation error branches, duplicate path relocations rejection, and clean deregistrations.
   * **Validation/Test Location**: Run `npm run test:ui` (or `npm run test`) to verify.
@@ -292,13 +292,13 @@
 
 **Goal**: Implement the popovers, action choices, and double confirm overlays matching the project management design reference layouts.
 
-- [ ] **T028** **Project Ellipsis Hover Menu & Popover**
+- [x] **T028** **Project Ellipsis Hover Menu & Popover**
   * **Target Files**:
     - `src/components/Sidebar.tsx`
   * **Expected Behavior**: Render an actions menu button (Feather-style ellipsis `icon-ellipsis` or vertical/horizontal ellipsis) on project row mouse hover. Clicking it displays a popover menu anchored to the ellipsis with options **Edit Project** and **Remove Project**. Clicking outside dismisses the popover.
   * **Constraints**: Keep popovers properly aligned.
 
-- [ ] **T029** **Edit Project Modal Component**
+- [x] **T029** **Edit Project Modal Component**
   * **Target File**: `src/components/EditProjectModal.tsx` (New file)
   * **Expected Behavior**: Create the Edit Project modal dialog in the light card style.
     - Title: "Edit Project".
@@ -308,26 +308,26 @@
     - Save button, disabled until name or folder differs from saved values.
     - Cancel button. If changes exist, triggers the Discard changes modal.
 
-- [ ] **T030** **Remove Confirm Modal Component**
+- [x] **T030** **Remove Confirm Modal Component**
   * **Target File**: `src/components/RemoveConfirmModal.tsx` (New file)
   * **Expected Behavior**: Create the Remove Project confirmation overlay in the light card style.
     - Title: "Remove '{project name}'?".
     - Warning text: "This removes the project from Minna. Your project files on disk won't be affected." (Do not use prototype's destructive copy).
     - Footer CTAs: Cancel, Remove Project (red, destructive).
 
-- [ ] **T031a** **Discard changes Confirm Modal Component**
+- [x] **T031a** **Discard changes Confirm Modal Component**
   * **Target File**: `src/components/DiscardConfirmModal.tsx` (New file)
   * **Expected Behavior**: Create the Discard changes confirmation overlay.
     - Title: "Discard changes?".
     - Prompt: "You have unsaved changes. Are you sure you want to discard them?".
     - Footer CTAs: Keep Editing, Discard.
 
-- [ ] **T031b** **UI Component Unit Tests**
+- [x] **T031b** **UI Component Unit Tests**
   * **Target Files**:
     - `src/components/__tests__/EditProjectModal.test.tsx` (New file)
   * **Expected Behavior**: Write unit/integration tests verifying the actions menu popover triggers (dismiss-on-outside-click), the Edit Modal form layout (Save button disabled status, picker callback validation), Discard confirm triggers, and Remove modal confirmation buttons.
 
-- [ ] **T032** **UI Modals Orchestration & Provider Integration**
+- [x] **T032** **UI Modals Orchestration & Provider Integration**
   * **Target Files**:
     - `src/components/Sidebar.tsx`
     - `src/components/WorkspaceProvider.tsx`
@@ -340,7 +340,7 @@
 
 **Purpose**: Execute final manual smoke tests on the update/delete amendment features, update changelogs, and bump roadmap status.
 
-- [ ] **T033** **E2E Project Management Verification**
+- [x] **T033** **E2E Project Management Verification**
   * **Target Component**: Whole application workspace
   * **Expected Behavior**: Run development mode and manually verify:
     1. Hover row, select Edit Project from actions menu, edit name, click Save, and check display name changes in the sidebar.
@@ -350,7 +350,7 @@
     5. Delete `config.yaml` from a registered project on disk, reload, and verify the project displays as muted/unavailable in the sidebar. Delete `minna.db` from a healthy project on disk, reload, verify it displays as available in the sidebar, open it, and verify that `minna.db` self-heals by initializing database tables.
     6. Check that all mutations write events to `registry-events.json` in the home `.minna` directory.
 
-- [ ] **T034** **Changelog and Roadmap Bump**
+- [x] **T034** **Changelog and Roadmap Bump**
   * **Target Files**:
     - `CHANGELOG.md`
     - `docs/feature_roadmap.md`

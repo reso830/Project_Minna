@@ -2,7 +2,7 @@ import { access, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { parse, stringify } from "yaml";
-import { registerProject, type ProjectRegistryPaths } from "./registry.js";
+import { prepareProject, registerProject, verifyProjectHealth, type ProjectRegistryPaths } from "./registry.js";
 import type { ProjectContext } from "./types.js";
 
 const CONFIG_DIRECTORY = ".minna";
@@ -38,6 +38,10 @@ export async function resolveProjectContext(
   while (true) {
     const configPath = join(directory, CONFIG_DIRECTORY, CONFIG_FILE);
     if (await fileExists(configPath)) {
+      const health = await verifyProjectHealth(directory);
+      if (!health.available) {
+        throw new Error(`Project directory is unavailable: ${health.error}`);
+      }
       return contextFromConfig(directory, parse(await readFile(configPath, "utf8")));
     }
 
@@ -60,6 +64,11 @@ export async function syncProjectContext(
   context: ProjectContext,
   paths?: ProjectRegistryPaths,
 ): Promise<void> {
+  const health = await verifyProjectHealth(context.project.path);
+  if (!health.available) {
+    throw new Error(`Project directory is unavailable: ${health.error}`);
+  }
+  await prepareProject(context.project.path);
   await registerProject({
     id: context.key,
     name: context.project.name,

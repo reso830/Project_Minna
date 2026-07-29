@@ -5,6 +5,9 @@ import { createContext, useContext, useEffect, useMemo, useState, type PropsWith
 import { mockEvents, mockFeatures } from "../core/mockData";
 import type { ProjectRegistry, ProjectRegistryEntry, WorkItem, WorkItemEvent } from "../core/types";
 import { ErrorModal } from "./ErrorModal";
+import { DiscardConfirmModal } from "./DiscardConfirmModal";
+import { EditProjectModal } from "./EditProjectModal";
+import { RemoveConfirmModal } from "./RemoveConfirmModal";
 
 type RightTab = "agents" | "md" | "diff";
 type WorkspaceView = "journal" | "board";
@@ -26,6 +29,8 @@ interface WorkspaceContextValue {
   toggleProject: (projectName: string) => void;
   addProject: () => Promise<void>;
   openProject: (projectId: string) => Promise<void>;
+  editProject: (project: ProjectRegistryEntry) => void;
+  requestProjectRemoval: (project: ProjectRegistryEntry) => void;
   toggleAgent: (agentId: string) => void;
   submitReply: (featureId: string, text: string) => void;
   submitDecision: (featureId: string, decisionId: string, option: string) => void;
@@ -59,6 +64,22 @@ const isProject = (value: unknown): value is ProjectRegistryEntry => {
     && typeof project.last_opened_at === "string";
 };
 
+const requestProjectOpen = async (projectId: string): Promise<ProjectRegistryEntry | null> => {
+  try {
+    const response = await fetch("/api/projects/open", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: projectId }),
+    });
+    if (!response.ok) return null;
+    const data: unknown = await response.json();
+    const project = (data as { project?: unknown }).project;
+    return isProject(project) ? project : null;
+  } catch {
+    return null;
+  }
+};
+
 export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(defaultFeatureId);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -71,6 +92,9 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [events, setEvents] = useState<Record<string, WorkItemEvent[]>>(cloneEvents);
   const [resolvedDecisions, setResolvedDecisions] = useState<Record<string, Record<string, string>>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [editingProject, setEditingProject] = useState<ProjectRegistryEntry | null>(null);
+  const [removingProject, setRemovingProject] = useState<ProjectRegistryEntry | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => {
     const storedFeatureId = window.sessionStorage.getItem("minna_active_feature_id");
@@ -119,11 +143,18 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
 
         const loadedProjects = sortProjects(data);
         setProjects(loadedProjects);
-        setActiveProjectId((current) => current ?? loadedProjects[0]?.id ?? null);
         setExpandedProjects(Object.fromEntries(loadedProjects.map((project, index) => [
           project.id,
           readJson(`minna_project_expanded_${project.id}`, index === 0),
         ])));
+        const defaultProject = loadedProjects[0];
+        if (!defaultProject) return;
+
+        const openedProject = defaultProject.available === false ? null : await requestProjectOpen(defaultProject.id);
+        if (openedProject) {
+          setProjects((current) => sortProjects([openedProject, ...current.filter((project) => project.id !== openedProject.id)]));
+        }
+        setActiveProjectId((current) => current ?? openedProject?.id ?? defaultProject.id);
       } catch {
         // The prototype remains usable when the local registry is unavailable.
       }
@@ -196,23 +227,13 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       const currentProject = projects.find((project) => project.id === projectId);
       if (!currentProject?.available) return;
 
-      try {
-        const response = await fetch("/api/projects/open", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: projectId }),
-        });
-        if (!response.ok) return;
-        const data: unknown = await response.json();
-        const project = (data as { project?: unknown }).project;
-        if (!isProject(project)) return;
-
-        setProjects((current) => sortProjects([project, ...current.filter((candidate) => candidate.id !== project.id)]));
-        setActiveProjectId(project.id);
-      } catch {
-        // A failed switch leaves the current project state unchanged.
-      }
+      const project = await requestProjectOpen(projectId);
+      if (!project) return;
+      setProjects((current) => sortProjects([project, ...current.filter((candidate) => candidate.id !== project.id)]));
+      setActiveProjectId(project.id);
     },
+    editProject: (project) => setEditingProject(project),
+    requestProjectRemoval: (project) => setRemovingProject(project),
     toggleAgent: (agentId) => {
       setExpandedAgents((current) => {
         const next = { ...current, [agentId]: !current[agentId] };
@@ -266,10 +287,73 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     },
   }), [activeFeatureId, activeProjectId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, projects, resolvedDecisions]);
 
+  const selectProjectPath = async (): Promise<string | null> => {
+    try {
+      const response = await fetch("/api/projects/pick", { method: "POST" });
+      if (!response.ok) return null;
+      const data: unknown = await response.json();
+      return typeof (data as { path?: unknown }).path === "string" ? (data as { path: string }).path : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveProject = async (name: string, path: string) => {
+    if (!editingProject) return;
+    try {
+      const response = await fetch("/api/projects/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingProject.id, name, path }),
+      });
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null);
+        setValidationError(typeof (data as { details?: unknown })?.details === "string" ? (data as { details: string }).details : "The project could not be updated.");
+        return;
+      }
+      const data: unknown = await response.json();
+      const project = (data as { project?: unknown }).project;
+      if (!isProject(project)) return;
+      setProjects((current) => sortProjects(current.map((candidate) => candidate.id === project.id ? project : candidate)));
+      setEditingProject(null);
+    } catch {
+      setValidationError("The project could not be updated.");
+    }
+  };
+
+  const removeProject = async () => {
+    if (!removingProject) return;
+    try {
+      const response = await fetch("/api/projects/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: removingProject.id }),
+      });
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null);
+        setValidationError(typeof (data as { details?: unknown })?.details === "string" ? (data as { details: string }).details : "The project could not be removed.");
+        return;
+      }
+      setProjects((current) => current.filter((project) => project.id !== removingProject.id));
+      setExpandedProjects((current) => {
+        const { [removingProject.id]: _removed, ...remaining } = current;
+        return remaining;
+      });
+      if (activeProjectId === removingProject.id) setActiveProjectId(null);
+      setRemovingProject(null);
+      setEditingProject(null);
+    } catch {
+      setValidationError("The project could not be removed.");
+    }
+  };
+
   return (
     <WorkspaceContext.Provider value={value}>
       {children}
       {validationError && <ErrorModal details={validationError} onDismiss={() => setValidationError(null)} />}
+      {editingProject && <EditProjectModal active={!removingProject} onCancel={(dirty) => dirty ? setConfirmDiscard(true) : setEditingProject(null)} onRemove={() => setRemovingProject(editingProject)} onSave={saveProject} onSelectPath={selectProjectPath} project={editingProject} />}
+      {removingProject && <RemoveConfirmModal name={removingProject.name} onCancel={() => setRemovingProject(null)} onRemove={() => void removeProject()} />}
+      {confirmDiscard && <DiscardConfirmModal onDiscard={() => { setConfirmDiscard(false); setEditingProject(null); }} onKeepEditing={() => setConfirmDiscard(false)} />}
     </WorkspaceContext.Provider>
   );
 }

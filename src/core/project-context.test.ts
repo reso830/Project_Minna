@@ -81,6 +81,7 @@ test("synchronizes a resolved project with the registry and records reopens", as
     await syncProjectContext(context, paths);
     await syncProjectContext(context, paths);
 
+    await access(join(directory, ".minna", "minna.db"));
     assert.deepEqual((await listRegisteredProjects(paths)).map(project => ({
       id: project.id,
       name: project.name,

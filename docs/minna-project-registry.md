@@ -27,13 +27,16 @@ Tracks the append-only event journal:
 - `id`: INTEGER PRIMARY KEY AUTOINCREMENT
 - `timestamp`: TEXT
 - `actor`: TEXT
-- `type`: TEXT (`project.registered`, `project.opened`)
+- `type`: TEXT (`project.registered`, `project.opened`, `project.renamed`, `project.relocated`, `project.removed`)
 - `payload`: TEXT
+
+A complete read-only JSON export of the events list is synchronized at `~/.minna/registry-events.json` on mutations.
 
 ---
 
 ## Revisions
 
+- **v4** — expanded for Project Management, adding project rename, relocate path validation, registry-only removal, ongoing health checks, and lazy DB open repairs. Exports `~/.minna/registry-events.json` for full historical audit.
 - **v3** — migrated to SQLite database backing (`projects.db`) with immediate write-locking to comply with core Constitution Principle III and VI.
 - **v2** — added `last_opened_at`.
 - **v1** — registry entry shape.

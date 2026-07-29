@@ -67,3 +67,53 @@ When working with the CLI, any command run within a project directory automatica
 3. **Result**:
    - The CLI will initialize the registry sync using database write locks.
    - Check the registry events in `~/.minna/projects.db` or examine the read-only projection file `~/.minna/projects.json` to confirm that the project path is registered with its `last_opened_at` timestamp updated to the execution time.
+
+---
+
+## 5. Editing Project Display Name
+
+1. In the left sidebar list of projects, hover over the project you wish to modify.
+2. Click the **vertical/horizontal ellipsis (⋯)** button that appears.
+3. Select **Edit Project** from the actions menu popover.
+4. Modify the project name in the text input (e.g. `My Awesome Project`).
+5. Click **Save**.
+6. **Result**:
+   - The registry writes a `project.renamed` event and updates the projects projection table in `~/.minna/projects.db`.
+   - The UI sidebar display name updates immediately. The local project `.minna/config.yaml` is not edited (rename is registry-only).
+
+---
+
+## 6. Relocating Project Directory
+
+1. Open the **Edit Project** modal for the desired project.
+2. Click **Select project directory** (next to the folder path field).
+3. Choose a new directory path in the native OS folder picker.
+4. **Relocation Validation**:
+   - **Case A (Valid Target)**: The chosen target path contains a valid `.minna/config.yaml`. Click **Save** to persist. Minna updates the registered path, writes a `project.relocated` event, and switches focus.
+   - **Case B (Missing Config Target)**: The target path lacks `.minna/config.yaml`. An Error Modal appears detailing the validation rejection. Relocation is aborted. No scaffolding is executed.
+   - **Case C (Duplicate Target)**: The target path is already registered under another project. An Error Modal appears: `"This directory is already registered as project '{existing_project_name}'."` Relocation is aborted.
+
+---
+
+## 7. Removing Project from Registry
+
+1. Open the actions menu popover for the project, or click the red **Remove Project** button on the bottom-left of the Edit Project Modal.
+2. A Remove confirmation modal will appear: `"Remove '{project name}'? This removes the project from Minna. Your project files on disk won't be affected."`
+3. Click the red **Remove Project** confirmation button.
+4. **Result**:
+   - The registry deletes the row from the `projects` projection table and records a `project.removed` event.
+   - The project is removed from the sidebar. All folder contents on disk are completely untouched.
+   - If you removed the currently active project, the active project context is reset to `null` and the UI renders the empty screen state.
+
+---
+
+## 8. Ongoing Project Health Checks & Lazy open DB repairs
+
+To test the ongoing health checks and database self-healing on load:
+1. **Unavailable/Muted States**: Delete `.minna/config.yaml` from a registered project directory (or mock a missing path).
+   - Reload the browser.
+   - The project row in the sidebar displays as muted and grayed out, and clicking it to open is blocked.
+2. **Missing Local DB Self-Healing**: Delete `.minna/minna.db` from a healthy project directory (while keeping its `.minna/config.yaml` intact).
+   - Reload the browser.
+   - The project row displays as healthy/available in the sidebar (since reads do not mutate disk files).
+   - Click the project row. Minna opens the project and lazily calls `prepareProject()`, creating and initializing `.minna/minna.db` tables automatically.

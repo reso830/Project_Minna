@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { parse } from "yaml";
 import { initDb } from "./db.js";
-import type { ProjectRegistry, ProjectRegistryEntry } from "./types.js";
+import type { EventEnvelope, ProjectRegistry, ProjectRegistryEntry } from "./types.js";
 
 export interface ProjectRegistryPaths {
   databasePath: string;
@@ -48,6 +48,24 @@ async function exportProjects(paths: ProjectRegistryPaths, projects: ProjectRegi
   await writeFile(paths.exportPath, `${JSON.stringify(projects, null, 2)}\n`, "utf8");
 }
 
+function registryEventsExportPath(paths: ProjectRegistryPaths): string {
+  return join(dirname(paths.exportPath), "registry-events.json");
+}
+
+function readRegistryEvents(database: DatabaseSync): EventEnvelope[] {
+  const rows = database.prepare(
+    "SELECT id, timestamp, actor, type, payload FROM events ORDER BY id ASC",
+  ).all() as Array<{ id: number; timestamp: string; actor: string; type: string; payload: string }>;
+
+  return rows.map(event => ({ ...event, payload: JSON.parse(event.payload) }));
+}
+
+async function exportRegistryEvents(paths: ProjectRegistryPaths, events: EventEnvelope[]): Promise<void> {
+  const exportPath = registryEventsExportPath(paths);
+  await mkdir(dirname(exportPath), { recursive: true });
+  await writeFile(exportPath, `${JSON.stringify(events, null, 2)}\n`, "utf8");
+}
+
 async function mutateRegistry(
   paths: ProjectRegistryPaths,
   mutation: (database: DatabaseSync) => void,
@@ -66,6 +84,7 @@ async function mutateRegistry(
 
     const projects = readProjects(database);
     await exportProjects(paths, projects);
+    await exportRegistryEvents(paths, readRegistryEvents(database));
     return projects;
   } finally {
     database.close();
@@ -118,10 +137,80 @@ export async function listRegisteredProjects(
   await initializeProjectRegistry(paths);
   const database = openRegistryDatabase(paths.databasePath);
   try {
-    return readProjects(database);
+    const projects = readProjects(database);
+    return Promise.all(projects.map(async project => ({
+      ...project,
+      available: (await verifyProjectHealth(project.path)).available,
+    })));
   } finally {
     database.close();
   }
+}
+
+export async function updateProject(
+  id: string,
+  name: string,
+  path: string,
+  paths: ProjectRegistryPaths = getProjectRegistryPaths(),
+  actor = "system",
+): Promise<ProjectRegistryEntry> {
+  await initializeProjectRegistry(paths);
+  let updatedProject: ProjectRegistryEntry | undefined;
+
+  await mutateRegistry(paths, database => {
+    const existing = database.prepare(
+      "SELECT id, name, path, last_opened_at FROM projects WHERE id = ?",
+    ).get(id) as ProjectRegistryEntry | undefined;
+    if (!existing) {
+      throw new Error(`Project '${id}' is not registered.`);
+    }
+
+    const matchingPath = database.prepare(
+      "SELECT id, name, path, last_opened_at FROM projects WHERE path = ?",
+    ).get(path) as ProjectRegistryEntry | undefined;
+    if (matchingPath && matchingPath.id !== id) {
+      throw new Error(`This directory is already registered as project '${matchingPath.name}'.`);
+    }
+
+    updatedProject = { ...existing, name, path };
+    const timestamp = new Date().toISOString();
+    if (name !== existing.name) {
+      database.prepare(
+        "INSERT INTO events (timestamp, actor, type, payload) VALUES (?, ?, ?, ?)",
+      ).run(timestamp, actor, "project.renamed", JSON.stringify({ id, name, path }));
+    }
+    if (path !== existing.path) {
+      database.prepare(
+        "INSERT INTO events (timestamp, actor, type, payload) VALUES (?, ?, ?, ?)",
+      ).run(timestamp, actor, "project.relocated", JSON.stringify({ id, name, path }));
+    }
+    if (name !== existing.name || path !== existing.path) {
+      database.prepare("UPDATE projects SET name = ?, path = ? WHERE id = ?").run(name, path, id);
+    }
+  });
+
+  return updatedProject as ProjectRegistryEntry;
+}
+
+export async function removeProject(
+  id: string,
+  paths: ProjectRegistryPaths = getProjectRegistryPaths(),
+  actor = "system",
+): Promise<void> {
+  await initializeProjectRegistry(paths);
+
+  await mutateRegistry(paths, database => {
+    const project = database.prepare(
+      "SELECT id FROM projects WHERE id = ?",
+    ).get(id) as { id: string } | undefined;
+    if (!project) {
+      throw new Error(`Project '${id}' is not registered.`);
+    }
+    database.prepare(
+      "INSERT INTO events (timestamp, actor, type, payload) VALUES (?, ?, ?, ?)",
+    ).run(new Date().toISOString(), actor, "project.removed", JSON.stringify({ id }));
+    database.prepare("DELETE FROM projects WHERE id = ?").run(id);
+  });
 }
 
 export async function registerProject(
@@ -221,6 +310,19 @@ function validateConfig(config: unknown): void {
   }
   if (typeof record.created_at !== "string" || !isIsoTimestamp(record.created_at)) {
     throw new Error("Project config.yaml created_at must be an ISO 8601 timestamp.");
+  }
+}
+
+export async function verifyProjectHealth(projectPath: string): Promise<{ available: boolean; error?: string }> {
+  try {
+    if (!(await stat(projectPath)).isDirectory()) {
+      return { available: false, error: `Project path '${projectPath}' is not a directory.` };
+    }
+    const configPath = join(projectPath, ".minna", "config.yaml");
+    validateConfig(parse(await readFile(configPath, "utf8")));
+    return { available: true };
+  } catch (error) {
+    return { available: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 

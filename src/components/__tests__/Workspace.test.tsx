@@ -68,19 +68,22 @@ test("renders the three workspace regions", () => {
   expect(screen.getByLabelText("Details")).toBeInTheDocument();
 });
 
-test("loads the first registered project on a fresh session", async () => {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => [
-      { id: "atlas", name: "Atlas", path: "/projects/atlas", last_opened_at: "2026-07-29T09:32:40.000Z", available: true },
-    ],
-  });
+test("opens the first registered project on a fresh session", async () => {
+  const atlas = { id: "atlas", name: "Atlas", path: "/projects/atlas", last_opened_at: "2026-07-29T09:32:40.000Z", available: true };
+  const fetchMock = jest.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [atlas] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: atlas }) });
+  global.fetch = fetchMock;
   const mountedWorkspace = renderHook(() => useWorkspace(), { wrapper });
 
   await waitFor(() => {
     expect(mountedWorkspace.result.current.activeProjectId).toBe("atlas");
     expect(mountedWorkspace.result.current.expandedProjects.atlas).toBe(true);
   });
+  expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/projects/open", expect.objectContaining({
+    method: "POST",
+    body: JSON.stringify({ id: "atlas" }),
+  }));
 });
 
 test("switches between the prototype's journal and board views", () => {

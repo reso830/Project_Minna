@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Sidebar } from "../Sidebar";
 import { WorkspaceProvider } from "../WorkspaceProvider";
 
@@ -103,8 +103,54 @@ describe("Sidebar", () => {
 
     renderSidebar();
     const atlas = await screen.findByRole("button", { name: "Atlas" });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     fireEvent.click(atlas);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens the project action popover and dismisses it when clicking outside", async () => {
+    renderSidebar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Project actions for Atlas" }));
+    expect(screen.getByRole("button", { name: "Edit Project" })).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole("button", { name: "Edit Project" })).not.toBeInTheDocument();
+  });
+
+  it("opens removal confirmation from a project action", async () => {
+    renderSidebar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Project actions for Atlas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Project" }));
+
+    expect(screen.getByRole("dialog", { name: "Remove Atlas" })).toBeInTheDocument();
+    expect(screen.getByText(/Your project files on disk won't be affected/)).toBeInTheDocument();
+  });
+
+  it("asks before discarding dirty project edits", async () => {
+    renderSidebar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Project actions for Atlas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Project" }));
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Atlas Next" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByRole("dialog", { name: "Discard project changes" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(screen.queryByRole("dialog", { name: "Edit Atlas" })).not.toBeInTheDocument();
+  });
+
+  it("retains dirty edits when removal is cancelled", async () => {
+    renderSidebar();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Project actions for Atlas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Project" }));
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Atlas Next" } });
+    fireEvent.click(screen.getByRole("button", { name: "Remove Project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByLabelText("Project name")).toHaveValue("Atlas Next");
   });
 });

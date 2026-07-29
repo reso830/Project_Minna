@@ -3,7 +3,8 @@
 import Image from "next/image";
 
 import { AgentUsage } from "./AgentUsage";
-import { ChevronIcon, PlusIcon, SettingsIcon, ViewToggleIcon } from "./icons";
+import { ChevronIcon, EllipsisIcon, PlusIcon, RemoveIcon, SettingsIcon, ViewToggleIcon } from "./icons";
+import { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "./WorkspaceProvider";
 
 function featureNumber(id: string): string {
@@ -15,14 +16,26 @@ export function Sidebar() {
     activeFeatureId,
     activeProjectId,
     addProject,
+    editProject,
     expandedProjects,
     features,
     openProject,
     projects,
+    requestProjectRemoval,
     selectFeature,
     toggleProject,
     toggleWorkspaceView,
   } = useWorkspace();
+  const [menuProjectId, setMenuProjectId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const dismissMenu = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuProjectId(null);
+    };
+    document.addEventListener("mousedown", dismissMenu);
+    return () => document.removeEventListener("mousedown", dismissMenu);
+  }, []);
 
   return (
     <div className="sidebar">
@@ -65,6 +78,15 @@ export function Sidebar() {
                   <span aria-hidden="true" className="sidebar-chevron"><ChevronIcon direction={isExpanded ? "down" : "right"} /></span>
                   <span>{project.name}</span>
                 </button>
+                <div className="sidebar-project-menu" ref={menuProjectId === project.id ? menuRef : undefined}>
+                  <button aria-expanded={menuProjectId === project.id} aria-label={`Project actions for ${project.name}`} className="sidebar-project-menu-trigger" onClick={() => setMenuProjectId((current) => current === project.id ? null : project.id)} type="button"><EllipsisIcon /></button>
+                  {menuProjectId === project.id && (
+                    <div className="sidebar-project-popover">
+                      <button onClick={() => { setMenuProjectId(null); editProject(project); }} type="button"><SettingsIcon />Edit Project</button>
+                      <button className="sidebar-project-popover-remove" onClick={() => { setMenuProjectId(null); requestProjectRemoval(project); }} type="button"><RemoveIcon />Remove Project</button>
+                    </div>
+                  )}
+                </div>
                 <button
                   aria-label={`Add feature to ${project.name}`}
                   className="sidebar-add-feature"

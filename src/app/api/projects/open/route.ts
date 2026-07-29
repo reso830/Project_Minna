@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { stat } from "node:fs/promises";
-import { listRegisteredProjects, openRegisteredProject } from "../../../../core/registry";
+import { listRegisteredProjects, openRegisteredProject, prepareProject, verifyProjectHealth } from "../../../../core/registry";
 
 export const runtime = "nodejs";
 
@@ -22,12 +21,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not Found", details: `No project registered with ID '${id}'.` }, { status: 404 });
     }
 
-    try {
-      await stat(project.path);
-    } catch {
-      return NextResponse.json({ error: "Project Unavailable", details: `The project path '${project.path}' no longer exists.` }, { status: 410 });
+    const health = await verifyProjectHealth(project.path);
+    if (!health.available) {
+      return NextResponse.json({ error: "Project Unavailable", details: health.error }, { status: 410 });
     }
 
+    await prepareProject(project.path);
     return NextResponse.json({ success: true, project: await openRegisteredProject(id) });
   } catch (error) {
     return NextResponse.json({ error: "Internal Server Error", details: String(error) }, { status: 500 });

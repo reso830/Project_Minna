@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — Project Management Amendment
+
+- Added Project Rename capabilities to modify the registered display name in the central database without altering local files.
+- Added Project Relocate validation, which updates the registered folder path using the native OS directory selector and immediately rejects relocations to paths that are already registered or lack a valid `.minna/config.yaml`.
+- Added Project Removal to safely deregister projects from the central registry projection while preserving all folder contents on disk.
+- Added ongoing Project Health Checks to verify path existence and configuration schema validity on load, muting and disabling unavailable entries.
+- Added lazy database self-healing for missing `.minna/minna.db` files on project open.
+- Added a registry-scoped event history copy exported to `~/.minna/registry-events.json` on registry mutations.
+- Added unit and integration tests covering path collision checks, lazy DB self-healing, popovers, modals, dirty-tracking save gates, and active project removal context resets.
+
 ## 0.4.0 — Project Creation
 
 - Added the database-backed global project registry (`~/.minna/projects.db`) to track registered and opened project scopes.

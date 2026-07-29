@@ -45,6 +45,24 @@ export function PlusIcon({ size = 15 }: { size?: number }) {
   );
 }
 
+export function EllipsisIcon() {
+  return (
+    <svg aria-hidden="true" fill="currentColor" height="12" viewBox="0 0 24 24" width="12">
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
+  );
+}
+
+export function RemoveIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="13" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="13">
+      <path d="m6 6 12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
 export function SendIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
