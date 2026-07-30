@@ -10,7 +10,7 @@ function projectId(name: string): string {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/^-|-$/g, "") || "project";
 }
 
 export async function POST(request: Request) {

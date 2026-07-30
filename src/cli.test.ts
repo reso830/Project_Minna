@@ -138,6 +138,30 @@ test("running a CLI command inside a local project synchronizes its registry ent
   }
 });
 
+test("commands run from a project subdirectory use the project-root journal", async () => {
+  const root = await mkdtemp(join(tmpdir(), "minna-cli-root-journal-"));
+  const nested = join(root, "src");
+  try {
+    await mkdir(join(root, ".minna"), { recursive: true });
+    await mkdir(nested);
+    await writeFile(
+      join(root, ".minna", "config.yaml"),
+      "version: 1\ncreated_at: 2026-07-30T10:00:00.000Z\ndescription: null\n",
+      "utf8",
+    );
+
+    const created = await runCli(root, "start-feature", "--title", "Root journal item");
+    assert.equal(created.exitCode, 0);
+    const status = await runCli(nested, "status");
+
+    assert.equal(status.exitCode, 0);
+    assert.match(status.stdout, /Root journal item/);
+    await assert.rejects(() => access(join(nested, ".minna", "minna.db")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("CLI synchronization slugifies a local project folder name while preserving its display name", async () => {
   const root = await mkdtemp(join(tmpdir(), "minna-cli-slug-"));
   const dir = join(root, "Project Name_UPPER");

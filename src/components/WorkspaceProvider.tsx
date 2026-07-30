@@ -80,6 +80,17 @@ const requestProjectOpen = async (projectId: string): Promise<ProjectRegistryEnt
   }
 };
 
+const mergeProject = (project: ProjectRegistryEntry, current: ProjectRegistry): ProjectRegistryEntry => ({
+  ...project,
+  available: current.find((candidate) => candidate.id === project.id)?.available ?? true,
+});
+
+const pickerErrorDetails = async (response: Response): Promise<string> => {
+  const data: unknown = await response.json().catch(() => null);
+  const error = (data as { details?: unknown; error?: unknown })?.details ?? (data as { error?: unknown })?.error;
+  return typeof error === "string" ? error : "The native directory picker could not be opened.";
+};
+
 export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(defaultFeatureId);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -152,7 +163,10 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
 
         const openedProject = defaultProject.available === false ? null : await requestProjectOpen(defaultProject.id);
         if (openedProject) {
-          setProjects((current) => sortProjects([openedProject, ...current.filter((project) => project.id !== openedProject.id)]));
+          setProjects((current) => {
+            const merged = mergeProject(openedProject, current);
+            return sortProjects([merged, ...current.filter((project) => project.id !== merged.id)]);
+          });
         }
         setActiveProjectId((current) => current ?? openedProject?.id ?? defaultProject.id);
       } catch {
@@ -197,7 +211,10 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     addProject: async () => {
       try {
         const pickerResponse = await fetch("/api/projects/pick", { method: "POST" });
-        if (!pickerResponse.ok) return;
+        if (!pickerResponse.ok) {
+          if (pickerResponse.status !== 400) setValidationError(await pickerErrorDetails(pickerResponse));
+          return;
+        }
         const pickerData: unknown = await pickerResponse.json();
         if (typeof (pickerData as { path?: unknown }).path !== "string") return;
 
@@ -216,20 +233,23 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
         const project = (addData as { project?: unknown }).project;
         if (!isProject(project)) return;
 
-        setProjects((current) => sortProjects([project, ...current.filter((candidate) => candidate.id !== project.id)]));
+        setProjects((current) => sortProjects([{ ...project, available: true }, ...current.filter((candidate) => candidate.id !== project.id)]));
         setActiveProjectId(project.id);
         setExpandedProjects((current) => ({ ...current, [project.id]: true }));
       } catch {
-        // Validation and picker errors are presented by the Phase 04 error flow.
+        setValidationError("The native directory picker could not be opened.");
       }
     },
     openProject: async (projectId) => {
       const currentProject = projects.find((project) => project.id === projectId);
-      if (!currentProject?.available) return;
+      if (currentProject?.available === false) return;
 
       const project = await requestProjectOpen(projectId);
       if (!project) return;
-      setProjects((current) => sortProjects([project, ...current.filter((candidate) => candidate.id !== project.id)]));
+      setProjects((current) => {
+        const merged = mergeProject(project, current);
+        return sortProjects([merged, ...current.filter((candidate) => candidate.id !== merged.id)]);
+      });
       setActiveProjectId(project.id);
     },
     editProject: (project) => setEditingProject(project),
@@ -290,10 +310,14 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const selectProjectPath = async (): Promise<string | null> => {
     try {
       const response = await fetch("/api/projects/pick", { method: "POST" });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        if (response.status !== 400) setValidationError(await pickerErrorDetails(response));
+        return null;
+      }
       const data: unknown = await response.json();
       return typeof (data as { path?: unknown }).path === "string" ? (data as { path: string }).path : null;
     } catch {
+      setValidationError("The native directory picker could not be opened.");
       return null;
     }
   };
@@ -314,7 +338,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       const data: unknown = await response.json();
       const project = (data as { project?: unknown }).project;
       if (!isProject(project)) return;
-      setProjects((current) => sortProjects(current.map((candidate) => candidate.id === project.id ? project : candidate)));
+      setProjects((current) => sortProjects(current.map((candidate) => candidate.id === project.id ? mergeProject(project, current) : candidate)));
       setEditingProject(null);
     } catch {
       setValidationError("The project could not be updated.");
@@ -340,6 +364,10 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
         return remaining;
       });
       if (activeProjectId === removingProject.id) setActiveProjectId(null);
+      if (features.find((feature) => feature.id === activeFeatureId)?.project === removingProject.name) {
+        setActiveFeatureId(null);
+        setActiveView("journal");
+      }
       setRemovingProject(null);
       setEditingProject(null);
     } catch {

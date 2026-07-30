@@ -82,7 +82,7 @@ Alternatively, developers can specify a free-text project label scope using the 
 npm run start:cli -- status --project project-monica
 ```
 
-Use the Add Project interface in the local web application at `http://localhost:3000` to register new project directories dynamically using the native folder picker.
+Use the Add Project interface in the local web application at `http://localhost:3000` to register new project directories dynamically using the native folder picker. The Projects menu also supports registry-only rename, relocation, and removal; removal never deletes files from the project directory. Minna checks project health when listing projects and repairs a missing local `.minna/minna.db` when a healthy project is opened.
 
 ## Scaffold Gaps
 

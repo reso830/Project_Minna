@@ -189,6 +189,20 @@ test("assigns sequential slug suffixes to distinct paths with the same folder na
   });
 });
 
+test("uses a manageable fallback ID when a project name has no ASCII slug characters", async () => {
+  await withRegistry(async paths => {
+    const project = await registerProject({
+      id: "",
+      name: "プロジェクト",
+      path: "C:/projects/unicode",
+      last_opened_at: "2026-07-30T10:00:00.000Z",
+    }, paths);
+
+    assert.equal(project.id, "project");
+    assert.equal((await openRegisteredProject(project.id, paths)).id, "project");
+  });
+});
+
 test("registry event triggers reject updates and deletes", async () => {
   await withRegistry(async paths => {
     await initializeProjectRegistry(paths);

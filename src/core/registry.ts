@@ -1,6 +1,6 @@
-import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { parse } from "yaml";
 import { initDb } from "./db.js";
@@ -44,8 +44,7 @@ function readProjects(database: DatabaseSync): ProjectRegistry {
 }
 
 async function exportProjects(paths: ProjectRegistryPaths, projects: ProjectRegistry): Promise<void> {
-  await mkdir(dirname(paths.exportPath), { recursive: true });
-  await writeFile(paths.exportPath, `${JSON.stringify(projects, null, 2)}\n`, "utf8");
+  await writeJsonAtomically(paths.exportPath, projects);
 }
 
 function registryEventsExportPath(paths: ProjectRegistryPaths): string {
@@ -61,9 +60,14 @@ function readRegistryEvents(database: DatabaseSync): EventEnvelope[] {
 }
 
 async function exportRegistryEvents(paths: ProjectRegistryPaths, events: EventEnvelope[]): Promise<void> {
-  const exportPath = registryEventsExportPath(paths);
-  await mkdir(dirname(exportPath), { recursive: true });
-  await writeFile(exportPath, `${JSON.stringify(events, null, 2)}\n`, "utf8");
+  await writeJsonAtomically(registryEventsExportPath(paths), events);
+}
+
+async function writeJsonAtomically(path: string, value: unknown): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  const temporaryPath = join(dirname(path), `.${basename(path)}.${process.pid}.${Date.now()}.tmp`);
+  await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  await rename(temporaryPath, path);
 }
 
 async function mutateRegistry(
@@ -82,9 +86,17 @@ async function mutateRegistry(
       throw error;
     }
 
-    const projects = readProjects(database);
-    await exportProjects(paths, projects);
-    await exportRegistryEvents(paths, readRegistryEvents(database));
+    database.exec("BEGIN IMMEDIATE TRANSACTION");
+    let projects: ProjectRegistry;
+    try {
+      projects = readProjects(database);
+      await exportProjects(paths, projects);
+      await exportRegistryEvents(paths, readRegistryEvents(database));
+      database.exec("COMMIT TRANSACTION");
+    } catch (error) {
+      database.exec("ROLLBACK TRANSACTION");
+      throw error;
+    }
     return projects;
   } finally {
     database.close();
@@ -241,7 +253,7 @@ export async function registerProject(
     const baseId = project.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "") || project.id;
+      .replace(/^-+|-+$/g, "") || project.id || "project";
     let id = baseId;
     let suffix = 2;
     while (database.prepare("SELECT 1 FROM projects WHERE id = ?").get(id)) {
