@@ -16,6 +16,16 @@ export interface FeatureProjection {
   updated_at: string;
 }
 
+export interface ProjectRegistryEntry {
+  id: string;
+  name: string;
+  path: string;
+  last_opened_at: string;
+  available?: boolean;
+}
+
+export type ProjectRegistry = ProjectRegistryEntry[];
+
 export type PhaseId =
   | "specify"
   | "clarify"
@@ -32,16 +42,6 @@ export interface ProjectConfig {
   github?: string;
   speckit_dir: string;
   default_branch?: string;
-}
-
-export interface ProjectsConfig {
-  projects: Record<string, ProjectConfig>;
-}
-
-export interface EmbeddedProjectConfig {
-  project: ProjectConfig & {
-    key: string;
-  };
 }
 
 export interface ProjectContext {

@@ -4,13 +4,16 @@ import type { DatabaseSync } from "node:sqlite";
 import { exportFeatureJournal, initDb, openDb, readEvents, verifyDb } from "./core/db.js";
 import { deriveBlockedPresentation } from "./core/work-item-model.js";
 import { appendWorkItemEvent, createWorkItem, readWorkItemEvents, readWorkItems } from "./core/work-items.js";
-import { resolveProjectContext } from "./core/project-context.js";
-import type { WorkItemType } from "./core/types.js";
+import { resolveProjectContext, syncProjectContext } from "./core/project-context.js";
+import type { ProjectContext, WorkItemType } from "./core/types.js";
 
 const [command, ...args] = process.argv.slice(2);
+let journalDatabasePath: string | undefined;
+let embeddedProjectContext: ProjectContext | undefined;
 
 async function main(): Promise<void> {
-  await initDb();
+  await synchronizeProjectContext(args);
+  await initDb(journalDatabasePath);
 
   switch (command) {
     case "status":
@@ -39,6 +42,23 @@ async function main(): Promise<void> {
       return;
     default:
       printHelp();
+  }
+}
+
+async function synchronizeProjectContext(commandArgs: string[]): Promise<void> {
+  if (getFlag(commandArgs, "--project")) {
+    return;
+  }
+
+  try {
+    embeddedProjectContext = await resolveProjectContext();
+    await syncProjectContext(embeddedProjectContext);
+    journalDatabasePath = join(embeddedProjectContext.project.path, ".minna", "minna.db");
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("No project selected.")) {
+      return;
+    }
+    throw error;
   }
 }
 
@@ -77,10 +97,10 @@ async function startFeatureCommand(args: string[]): Promise<void> {
   }
   const workItemType: WorkItemType = (typeFlag as WorkItemType | undefined) ?? "feature";
 
-  // In embedded mode (a minna.project.yaml in cwd), --project can be omitted, matching the
+  // In embedded mode (a local .minna/config.yaml in cwd or a parent), --project can be omitted, matching the
   // documented project-resolution behavior; an explicit --project is used verbatim without
   // central-registry validation (work_items.project is a free-text label, not a resolved key).
-  const project = projectFlag ?? (await resolveProjectContext()).key;
+  const project = projectFlag ?? embeddedProjectContext?.key ?? (await resolveProjectContext()).key;
 
   await withJournal(async db => {
     const item = await createWorkItem(db, "human", {
@@ -238,7 +258,7 @@ function escapeMarkdown(value: string): string {
 }
 
 async function withJournal<T>(action: (db: DatabaseSync) => Promise<T>): Promise<T> {
-  const db = openDb();
+  const db = openDb(journalDatabasePath);
   try {
     return await action(db);
   } finally {

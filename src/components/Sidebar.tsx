@@ -3,7 +3,8 @@
 import Image from "next/image";
 
 import { AgentUsage } from "./AgentUsage";
-import { ChevronIcon, PlusIcon, SettingsIcon, ViewToggleIcon } from "./icons";
+import { ChevronIcon, EllipsisIcon, PlusIcon, RemoveIcon, SettingsIcon, ViewToggleIcon } from "./icons";
+import { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "./WorkspaceProvider";
 
 function featureNumber(id: string): string {
@@ -13,13 +14,28 @@ function featureNumber(id: string): string {
 export function Sidebar() {
   const {
     activeFeatureId,
+    activeProjectId,
+    addProject,
+    editProject,
     expandedProjects,
     features,
+    openProject,
+    projects,
+    requestProjectRemoval,
     selectFeature,
     toggleProject,
     toggleWorkspaceView,
   } = useWorkspace();
-  const projects = [...new Set(features.map((feature) => feature.project))];
+  const [menuProjectId, setMenuProjectId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const dismissMenu = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuProjectId(null);
+    };
+    document.addEventListener("mousedown", dismissMenu);
+    return () => document.removeEventListener("mousedown", dismissMenu);
+  }, []);
 
   return (
     <div className="sidebar">
@@ -36,30 +52,43 @@ export function Sidebar() {
 
       <div className="sidebar-projects-heading">
         <span>Projects</span>
-        <button aria-label="Add project" className="sidebar-icon-button sidebar-add-project" type="button"><PlusIcon /></button>
+        <button aria-label="Add project" className="sidebar-icon-button sidebar-add-project" onClick={() => void addProject()} type="button"><PlusIcon /></button>
       </div>
 
       <nav aria-label="Projects" className="sidebar-projects">
         {projects.map((project) => {
-          const isExpanded = expandedProjects[project] ?? false;
-          const projectFeatures = features.filter((feature) => feature.project === project);
+          const isExpanded = expandedProjects[project.id] ?? false;
+          const projectFeatures = features.filter((feature) => feature.project === project.name);
           const hasBlockedChild = !isExpanded && projectFeatures.some((feature) => feature.state === "blocked");
-          const hasSelectedFeature = projectFeatures.some((feature) => feature.id === activeFeatureId);
+          const isSelected = activeProjectId === project.id || projectFeatures.some((feature) => feature.id === activeFeatureId);
 
           return (
-            <div className="sidebar-project" key={project}>
-              <div className={`sidebar-project-row${hasBlockedChild ? " sidebar-project-row--blocked" : ""}${hasSelectedFeature ? " sidebar-project-row--selected" : ""}`}>
+            <div className="sidebar-project" key={project.id}>
+              <div className={`sidebar-project-row${hasBlockedChild ? " sidebar-project-row--blocked" : ""}${isSelected ? " sidebar-project-row--selected" : ""}${project.available === false ? " sidebar-project-row--unavailable" : ""}`}>
                 <button
                   aria-expanded={isExpanded}
-                  className={`sidebar-project-toggle${hasBlockedChild ? " sidebar-project-toggle--blocked" : ""}${hasSelectedFeature ? " sidebar-project-toggle--selected" : ""}`}
-                  onClick={() => toggleProject(project)}
+                  className={`sidebar-project-toggle${hasBlockedChild ? " sidebar-project-toggle--blocked" : ""}${isSelected ? " sidebar-project-toggle--selected" : ""}${project.available === false ? " sidebar-project-toggle--unavailable" : ""}`}
+                  disabled={project.available === false}
+                  onClick={() => {
+                    toggleProject(project.id);
+                    if (project.id !== activeProjectId) void openProject(project.id);
+                  }}
                   type="button"
                 >
                   <span aria-hidden="true" className="sidebar-chevron"><ChevronIcon direction={isExpanded ? "down" : "right"} /></span>
-                  <span>{project}</span>
+                  <span>{project.name}</span>
                 </button>
+                <div className="sidebar-project-menu" ref={menuProjectId === project.id ? menuRef : undefined}>
+                  <button aria-expanded={menuProjectId === project.id} aria-label={`Project actions for ${project.name}`} className="sidebar-project-menu-trigger" onClick={() => setMenuProjectId((current) => current === project.id ? null : project.id)} type="button"><EllipsisIcon /></button>
+                  {menuProjectId === project.id && (
+                    <div className="sidebar-project-popover">
+                      <button onClick={() => { setMenuProjectId(null); editProject(project); }} type="button"><SettingsIcon />Edit Project</button>
+                      <button className="sidebar-project-popover-remove" onClick={() => { setMenuProjectId(null); requestProjectRemoval(project); }} type="button"><RemoveIcon />Remove Project</button>
+                    </div>
+                  )}
+                </div>
                 <button
-                  aria-label={`Add feature to ${project}`}
+                  aria-label={`Add feature to ${project.name}`}
                   className="sidebar-add-feature"
                   onClick={(event) => event.stopPropagation()}
                   type="button"
@@ -69,7 +98,7 @@ export function Sidebar() {
               </div>
               {isExpanded && (
                 <div className="sidebar-feature-list">
-                  {projectFeatures.map((feature) => (
+                  {projectFeatures.length === 0 ? <span className="sidebar-empty-project">No features found</span> : projectFeatures.map((feature) => (
                     <button
                       aria-pressed={activeFeatureId === feature.id}
                       aria-label={`${feature.title}, ${feature.state}`}

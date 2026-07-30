@@ -29,16 +29,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run linting checks
+        run: npm run lint
+
       - name: Build CLI
         run: npm run build:cli
 
       - name: Build UI
-        run: |
-          if [ -d src/app ] || [ -d pages ]; then
-            npm run build
-          else
-            echo "Skipping UI build until Phase 02 adds the App Router directory."
-          fi
+        run: npm run build
 
       - name: Run unit tests
         run: npm run test:unit

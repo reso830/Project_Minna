@@ -7,8 +7,24 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <WorkspaceProvider>{children}</WorkspaceProvider>
 );
 
+function AddProjectButton() {
+  const { addProject } = useWorkspace();
+  return <button onClick={() => void addProject()} type="button">Add project</button>;
+}
+
+function RemoveActiveProjectButton() {
+  const { activeFeatureId, projects, requestProjectRemoval } = useWorkspace();
+  return (
+    <>
+      <output>{activeFeatureId ?? "none"}</output>
+      <button onClick={() => requestProjectRemoval(projects[0]!)} type="button">Remove active project</button>
+    </>
+  );
+}
+
 beforeEach(() => {
   window.sessionStorage.clear();
+  global.fetch = jest.fn(() => new Promise<Response>(() => {}));
 });
 
 test("persists a selected feature and resolves its decision in session storage", async () => {
@@ -67,13 +83,79 @@ test("renders the three workspace regions", () => {
   expect(screen.getByLabelText("Details")).toBeInTheDocument();
 });
 
-test("opens the prototype's default feature and project on a fresh session", async () => {
+test("opens the first registered project on a fresh session", async () => {
+  const atlas = { id: "atlas", name: "Atlas", path: "/projects/atlas", last_opened_at: "2026-07-29T09:32:40.000Z", available: true };
+  const fetchMock = jest.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [atlas] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: atlas }) });
+  global.fetch = fetchMock;
   const mountedWorkspace = renderHook(() => useWorkspace(), { wrapper });
 
   await waitFor(() => {
-    expect(mountedWorkspace.result.current.activeFeatureId).toBe("checkout-redesign-001");
-    expect(mountedWorkspace.result.current.expandedProjects["Checkout Redesign"]).toBe(true);
+    expect(mountedWorkspace.result.current.activeProjectId).toBe("atlas");
+    expect(mountedWorkspace.result.current.expandedProjects.atlas).toBe(true);
   });
+  expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/projects/open", expect.objectContaining({
+    method: "POST",
+    body: JSON.stringify({ id: "atlas" }),
+  }));
+});
+
+test("can reopen a project after mutation responses omit its availability annotation", async () => {
+  const atlas = { id: "atlas", name: "Atlas", path: "/projects/atlas", last_opened_at: "2026-07-30T10:00:00.000Z", available: true };
+  const borealis = { id: "borealis", name: "Borealis", path: "/projects/borealis", last_opened_at: "2026-07-30T09:00:00.000Z", available: true };
+  const rawAtlas = { ...atlas };
+  delete rawAtlas.available;
+  const rawBorealis = { ...borealis };
+  delete rawBorealis.available;
+  const fetchMock = jest.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [atlas, borealis] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawAtlas }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawBorealis }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawAtlas }) });
+  global.fetch = fetchMock;
+  const mountedWorkspace = renderHook(() => useWorkspace(), { wrapper });
+
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  await act(async () => { await mountedWorkspace.result.current.openProject("borealis"); });
+  await act(async () => { await mountedWorkspace.result.current.openProject("atlas"); });
+
+  expect(mountedWorkspace.result.current.activeProjectId).toBe("atlas");
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+});
+
+test("shows picker launch errors instead of treating them as cancellation", async () => {
+  global.fetch = jest.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "Native picker is unavailable" }) });
+  render(
+    <WorkspaceProvider>
+      <AddProjectButton />
+    </WorkspaceProvider>,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Add project" }));
+
+  expect(await screen.findByText("Native picker is unavailable")).toBeInTheDocument();
+});
+
+test("clears the selected feature when its project is removed", async () => {
+  const project = { id: "checkout", name: "Checkout Redesign", path: "/projects/checkout", last_opened_at: "2026-07-30T10:00:00.000Z", available: true };
+  global.fetch = jest.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => [project] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: { ...project, available: undefined } }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
+  render(
+    <WorkspaceProvider>
+      <RemoveActiveProjectButton />
+    </WorkspaceProvider>,
+  );
+
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+  fireEvent.click(screen.getByRole("button", { name: "Remove active project" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove Project" }));
+
+  expect(await screen.findByText("none")).toBeInTheDocument();
 });
 
 test("switches between the prototype's journal and board views", () => {
