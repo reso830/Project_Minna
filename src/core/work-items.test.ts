@@ -77,7 +77,7 @@ test("rejects a phase that does not belong to the work item type's sequence", as
 test("every derived phase_group on read matches the pure derivation for every phase", async () => {
   await withScratchDb(async db => {
     const phases: Array<[string, string]> = [
-      ["spec", "define"], ["plan", "define"], ["tasks", "define"], ["requirements-review", "define"],
+      ["spec", "define"], ["plan", "define"], ["tasks", "define"], ["spec-review", "define"],
       ["implement", "create"], ["review", "create"], ["integrate", "integrate"],
     ];
     let counter = 0;

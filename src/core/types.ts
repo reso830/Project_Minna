@@ -56,7 +56,7 @@ export type Phase =
   | "spec"
   | "plan"
   | "tasks"
-  | "requirements-review"
+  | "spec-review"
   | "implement"
   | "review"
   | "integrate";

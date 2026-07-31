@@ -1,4 +1,4 @@
-# Minna Event Model v1
+# Minna Event Model v2
 
 ## Description
 
@@ -45,7 +45,6 @@ The event journal's data shape for Minna work items.
 | `human.manual_test_recorded` | JSON (in `payload`) |
 
 ---
----
 
 ## Agent events
 
@@ -71,7 +70,7 @@ The event journal's data shape for Minna work items.
 | `type` | Payload fields |
 |---|---|
 | `work_item.created` | `work_item_type`, `title`, `project` |
-| `work_item.state_changed` | `from`, `to`, `blocked_reason` |
+| `work_item.state_changed` | `from`, `to`, `blocked_reason`, `closed_reason` |
 | `work_item.phase_changed` | `from`, `to`, `trigger` |
 ---
 
@@ -87,4 +86,5 @@ The event journal's data shape for Minna work items.
 
 ## Revisions
 
+- **v2** — added `closed_reason` to `work_item.state_changed` payload, matching the state model's v2 addition.
 - **v1** — event card (incl. `project` field), operator events (3 types), agent events (3 types), Minna events — git (4 types), lifecycle (3 types), system (5 types, session-aware).
