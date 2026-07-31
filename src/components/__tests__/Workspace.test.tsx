@@ -1,6 +1,7 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 
 import HomePage from "../../app/page";
+import { mockFeatures } from "../../core/mockData";
 import { WorkspaceProvider, useWorkspace } from "../WorkspaceProvider";
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -111,17 +112,20 @@ test("can reopen a project after mutation responses omit its availability annota
   const fetchMock = jest.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => [atlas, borealis] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawAtlas }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawBorealis }) })
-    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawAtlas }) });
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ project: rawAtlas }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => [] });
   global.fetch = fetchMock;
   const mountedWorkspace = renderHook(() => useWorkspace(), { wrapper });
 
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
   await act(async () => { await mountedWorkspace.result.current.openProject("borealis"); });
   await act(async () => { await mountedWorkspace.result.current.openProject("atlas"); });
 
   expect(mountedWorkspace.result.current.activeProjectId).toBe("atlas");
-  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(fetchMock).toHaveBeenCalledTimes(7);
 });
 
 test("shows picker launch errors instead of treating them as cancellation", async () => {
@@ -140,10 +144,11 @@ test("shows picker launch errors instead of treating them as cancellation", asyn
 });
 
 test("clears the selected feature when its project is removed", async () => {
-  const project = { id: "checkout", name: "Checkout Redesign", path: "/projects/checkout", last_opened_at: "2026-07-30T10:00:00.000Z", available: true };
+  const project = { id: "checkout-redesign", name: "Checkout Redesign", path: "/projects/checkout", last_opened_at: "2026-07-30T10:00:00.000Z", available: true };
   global.fetch = jest.fn()
     .mockResolvedValueOnce({ ok: true, json: async () => [project] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ project: { ...project, available: undefined } }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => [mockFeatures[0]] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
   render(
     <WorkspaceProvider>
@@ -151,7 +156,7 @@ test("clears the selected feature when its project is removed", async () => {
     </WorkspaceProvider>,
   );
 
-  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
   fireEvent.click(screen.getByRole("button", { name: "Remove active project" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove Project" }));
 

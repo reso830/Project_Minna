@@ -29,6 +29,18 @@ Project_Minna/
       design/               # Design visual layout reference mockups
         error_modal_mockup.jpg
         sidebar_project_states_mockup.jpg
+    003-work-item-management/
+      spec.md
+      plan.md
+      tasks.md
+      research.md
+      data-model.md
+      quickstart.md
+      contracts/
+        api.md
+      checklists/
+        requirements.md
+        plan-review.md
   src/
     adapters/               # Third-party integration adapters
       claude.ts             # Claude LLM boundary
@@ -41,18 +53,30 @@ Project_Minna/
           open/route.ts     # Opens project scopes and updates last opened timestamps
           pick/route.ts     # Spawns OS-native directory picker dialogs
           route.ts          # Lists registered projects with disk availability flags
+        work-items/         # Next.js API Routes for Work Item Management
+          [id]/
+            drop/route.ts   # Soft-drops/archives a work item
+            route.ts        # Updates description and details brief files
+          route.ts          # Lists and creates work items
       globals.css           # Main styling system variables, typography, and utility tokens
       layout.tsx
       page.tsx              # Main entry point for the three-panel Journal View workspace
     components/             # UI Components
+      AddUpdateFeatureModal.tsx # Centered modal for creating and updating features
       AgentUsage.tsx        # Inline agent cost, quota, and runtime diagnostics bar
       CenterPanel.tsx       # Middle workspace timeline displaying event logs, decisions, and replies
+      DiscardConfirmModal.tsx # Confirmation dialog for discarding dirty changes
+      DropConfirmModal.tsx  # Confirmation dialog for soft-dropping a feature
       ErrorModal.tsx        # High-priority blocking dialog to render validation failures
       RightPanel.tsx        # Inspectable detail panel for active feature files and decisions
       Sidebar.tsx           # Navigation panel rendering projects, features, and operator details
       WorkspaceProvider.tsx # State provider managing selected projects, active features, and replies
       icons.tsx             # Shared SVGs for UI navigation and controls
     core/                   # Core Domain Logic & Persistence
+      repositories/         # Repository abstraction and data access layer
+        factory.ts          # Repository instantiation factory helper
+        sqlite.ts           # SQLite concrete implementations
+        types.ts            # Repository interface signatures
       db.ts                 # Local project event database helper (minna.db schema initialization)
       native-directory-picker.ts # OS-specific dialog picker subprocess commands (Darwin, Win32, Linux)
       project-context.ts    # Walks folder trees to resolve project scope contexts

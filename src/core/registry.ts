@@ -342,7 +342,7 @@ function freshConfig(): string {
   return `version: 1\ncreated_at: ${new Date().toISOString()}\ndescription: null\n`;
 }
 
-export async function prepareProject(projectPath: string): Promise<PreparedProject> {
+export async function prepareProject(projectPath: string, projectKey = basename(projectPath).toLowerCase()): Promise<PreparedProject> {
   const minnaDirectory = join(projectPath, ".minna");
   const configPath = join(minnaDirectory, "config.yaml");
   const databasePath = join(minnaDirectory, "minna.db");
@@ -359,7 +359,7 @@ export async function prepareProject(projectPath: string): Promise<PreparedProje
 
     await mkdir(minnaDirectory, { recursive: true });
     await writeFile(configPath, freshConfig(), "utf8");
-    await initDb(databasePath);
+    await initDb(databasePath, projectKey);
     return { initialized: true };
   }
 
@@ -385,7 +385,7 @@ export async function prepareProject(projectPath: string): Promise<PreparedProje
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
       throw error;
     }
-    await initDb(databasePath);
+    await initDb(databasePath, projectKey);
   }
 
   return { initialized: false };

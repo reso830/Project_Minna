@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Validation Failure", details: "Selected path must be a directory." }, { status: 400 });
     }
 
-    await prepareProject(projectPath);
+    await prepareProject(projectPath, projectId(basename(projectPath)));
     const existingProject = (await listRegisteredProjects()).find((project) => project.path === projectPath);
     if (existingProject) {
       return NextResponse.json({ success: true, project: await openRegisteredProject(existingProject.id) });

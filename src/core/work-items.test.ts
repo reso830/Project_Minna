@@ -131,6 +131,41 @@ test("rejects blocked state without a blocked_reason", async () => {
   });
 });
 
+test("rejects a title whose slug exceeds 50 characters", async () => {
+  await withScratchDb(async db => {
+    await assert.rejects(
+      () => createWorkItem(db, "human", {
+        id: "celia-101a",
+        title: "a".repeat(51),
+        description: "desc",
+        work_item_type: "feature",
+        project: "celia",
+      }),
+      /title.*50 characters/i,
+    );
+  });
+});
+
+test("rejects a closed_reason unless the work item is closed", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", { id: "celia-202", title: "t", description: "d", work_item_type: "issue", project: "celia" });
+    await assert.rejects(
+      () => updateWorkItemState(db, "minna", "celia-202", { state: "active", closed_reason: "dropped" }),
+      /closed_reason.*closed|closed.*closed_reason/i,
+    );
+  });
+});
+
+test("requires a closed_reason when closing a work item", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", { id: "celia-203", title: "t", description: "d", work_item_type: "issue", project: "celia" });
+    await assert.rejects(
+      () => updateWorkItemState(db, "minna", "celia-203", { state: "closed" }),
+      /closed_reason/i,
+    );
+  });
+});
+
 test("an execution event and an agent message both append to a work item's history and are distinguishable by family", async () => {
   await withScratchDb(async db => {
     await createWorkItem(db, "human", { id: "celia-300", title: "t", description: "d", work_item_type: "issue", project: "celia" });

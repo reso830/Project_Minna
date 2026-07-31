@@ -13,7 +13,7 @@ let embeddedProjectContext: ProjectContext | undefined;
 
 async function main(): Promise<void> {
   await synchronizeProjectContext(args);
-  await initDb(journalDatabasePath);
+  await initDb(journalDatabasePath, embeddedProjectContext?.key);
 
   switch (command) {
     case "status":
@@ -104,11 +104,11 @@ async function startFeatureCommand(args: string[]): Promise<void> {
 
   await withJournal(async db => {
     const item = await createWorkItem(db, "human", {
-      id: slugify(`${project}-${title}-${Date.now()}`),
       title,
       description,
       work_item_type: workItemType,
       project,
+      project_path: embeddedProjectContext?.project.path ?? process.cwd(),
     });
     console.log(`Created ${item.id} | ${item.state} | ${item.phase}`);
   });
@@ -264,13 +264,6 @@ async function withJournal<T>(action: (db: DatabaseSync) => Promise<T>): Promise
   } finally {
     db.close();
   }
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function getFlag(args: string[], name: string): string | undefined {

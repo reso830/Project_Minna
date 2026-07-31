@@ -31,14 +31,14 @@
 
 **Purpose**: Initialize model type definitions and prepare the Next.js API route directory structure.
 
-- [ ] T001 Expand type definitions in src/core/types.ts
+- [x] T001 Expand type definitions in src/core/types.ts
   * **Target Files**: [src/core/types.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/types.ts)
   * **Expected Behavior**: Update `WorkItem` type in `types.ts` to add v3 state model fields: `closed_reason`, `feature_brief_path`, `spec_path`, `plan_path`, and `tasks_path` as nullable optional strings. Ensure `Phase` type uses the canonical `"spec-review"` instead of `"requirements-review"`.
   * **Constraints**: Must not break existing project-creation schemas or types.
   * **Validation/Test Location**: Run `npm run build:cli` to verify compilation.
   * **Out-of-Scope**: Database model file updates.
 
-- [ ] T002 [P] Construct Next.js API route skeletons in src/app/api/work-items
+- [x] T002 [P] Construct Next.js API route skeletons in src/app/api/work-items
   * **Target Files**:
     - `src/app/api/work-items/route.ts` (New file)
     - `src/app/api/work-items/[id]/route.ts` (New file)
@@ -54,25 +54,25 @@
 **Purpose**: Build the database schema migrations and the repository pattern to handle local SQLite storage.
 * **⚠️ CRITICAL**: No user story UI implementation can begin until this phase is complete.
 
-- [ ] T003 Define Repository interfaces in src/core/repositories/types.ts
+- [x] T003 Define Repository interfaces in src/core/repositories/types.ts
   * **Target Files**: `src/core/repositories/types.ts` (New file)
-  * **Expected Behavior**: Define `IWorkItemsRepository` and `IEventsRepository` interfaces, outlining signatures for creating features, updating descriptions, fetching active lists, appending events, and reading events.
+  * **Expected Behavior**: Define `IWorkItemsRepository` and `IEventsRepository` interfaces, outlining signatures for creating features, fetching active lists, appending events, and reading events. The description-update signature and implementation are intentionally deferred to T009 (Phase 03), where its event-backed mutation behavior is introduced.
   * **Constraints**: Exclude UI or REST API dependencies. Supabase integration is deferred.
   * **Validation/Test Location**: Checked during CLI build.
 
-- [ ] T004 Implement SQLite repository classes in src/core/repositories/sqlite.ts
+- [x] T004 Implement SQLite repository classes in src/core/repositories/sqlite.ts
   * **Target Files**: `src/core/repositories/sqlite.ts` (New file)
   * **Expected Behavior**: Implement `SqliteWorkItemsRepository` and `SqliteEventsRepository` executing operations against local SQLite database connections using Node's `DatabaseSync` helper.
   * **Constraints**: Ensure write mutations occur inside database transactions.
   * **Validation/Test Location**: Tested in T007.
 
-- [ ] T005 [P] Create repository factory export in src/core/repositories/factory.ts
+- [x] T005 [P] Create repository factory export in src/core/repositories/factory.ts
   * **Target Files**: `src/core/repositories/factory.ts` (New file)
   * **Expected Behavior**: Export `createRepositories(config)` function that instantiates the SQLite concrete repository wrapper for the project's config directory.
   * **Constraints**: Do not import or bundle any external network databases like Supabase client libraries (Constitution XVI compliance).
   * **Validation/Test Location**: Tested in T007.
 
-- [ ] T006 Implement database migrations in src/core/db.ts
+- [x] T006 Implement database migrations in src/core/db.ts
   * **Target Files**: [src/core/db.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/db.ts)
   * **Expected Behavior**:
     - Update the initial `work_items` table schema query to include columns: `closed_reason`, `feature_brief_path`, `spec_path`, `plan_path`, and `tasks_path`.
@@ -86,7 +86,7 @@
   * **Constraints**: Must not drop or corrupt existing user tables or data. Must run cleanly against non-empty databases.
   * **Validation/Test Location**: Tested in T007.
 
-- [ ] T007 Write repository and migration unit tests in src/core/__tests__/repositories.test.ts
+- [x] T007 Write repository and migration unit tests in src/core/__tests__/repositories.test.ts
   * **Target Files**: `src/core/__tests__/repositories.test.ts` (New file)
   * **Expected Behavior**:
     - Verify that database schema migrations execute successfully on an older version SQLite file, adding missing columns to both `work_items` and `events` tables and backfilling null projects without data loss.
@@ -100,7 +100,7 @@
 **Goal**: Implement backend API routes and CLI handlers to create, read, and update work items.
 * **Independent Test**: Invoking the POST API or CLI command registers a work item, slugifies its title, generates a 3-digit ID, and saves its details brief to a local markdown file.
 
-- [ ] T008 [US1] [US2] Implement createWorkItem core function with atomic recovery in src/core/work-items.ts
+- [x] T008 [US1] [US2] Implement createWorkItem core function with atomic recovery in src/core/work-items.ts
   * **Target Files**: [src/core/work-items.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/work-items.ts)
   * **Expected Behavior**: Encapsulate all feature creation logic inside the core database module:
     - Slugify the title and discard the freeform input.
@@ -113,7 +113,7 @@
   * **Constraints**: API route handlers and CLI commands must be thin wrappers around this method (Constitution IV). Limit Description field to 100 characters.
   * **Validation/Test Location**: Tested in T011.
 
-- [ ] T009 [US3] Implement updateWorkItem (PATCH) with atomic brief write pipeline in src/core/work-items.ts
+- [x] T009 [US3] Implement updateWorkItem (PATCH) with atomic brief write pipeline in src/core/work-items.ts
   * **Target Files**: [src/core/work-items.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/work-items.ts)
   * **Expected Behavior**: Implement core helper for PATCH updates:
     - Write updated brief details text to `.minna/features/.<id>-<title>.tmp`.
@@ -123,7 +123,7 @@
   * **Constraints**: Title and ID are immutable on updates. Enforce description length limit.
   * **Validation/Test Location**: Tested in T011.
 
-- [ ] T010 Update CLI project initialization callers in src/cli.ts and registry.ts
+- [x] T010 Update CLI project initialization callers in src/cli.ts and registry.ts
   * **Target Files**:
     - [src/cli.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/cli.ts)
     - [src/core/registry.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/registry.ts)
@@ -133,7 +133,7 @@
   * **Constraints**: Ensure CLI start-feature continues to work correctly.
   * **Validation/Test Location**: Run `npm run dev:cli status` to verify execution. Tested in T011.
 
-- [ ] T011 [US1] [US2] [US3] Write API integration and CLI tests
+- [x] T011 [US1] [US2] [US3] Write API integration and CLI tests
   * **Target Files**:
     - `src/app/api/work-items/__tests__/work-items.test.ts` (New file)
     - `src/core/__tests__/cli-feature.test.ts` (New file)
@@ -149,7 +149,7 @@
 **Goal**: Implement backend actions to soft-drop/archive work items.
 * **Independent Test**: Triggering the drop endpoint transitions the item state to `closed` with `closed_reason = dropped` and writes a state change event.
 
-- [ ] T012 [US4] Update state update service logic and event payload validation in src/core/work-items.ts
+- [x] T012 [US4] Update state update service logic and event payload validation in src/core/work-items.ts
   * **Target Files**: [src/core/work-items.ts](file:///D:/Alvin/_CodeProjects/Project_Minna/src/core/work-items.ts)
   * **Expected Behavior**:
     - Update `UpdateWorkItemStateInput` interface and `updateWorkItemState` implementation to accept and persist `closed_reason` under the `work_items` projection.
@@ -157,7 +157,7 @@
   * **Constraints**: Do not overwrite pre-existing `closed_reason` if it was already set.
   * **Validation/Test Location**: Tested in T013.
 
-- [ ] T013 [US4] Implement drop route and drop integration tests
+- [x] T013 [US4] Implement drop route and drop integration tests
   * **Target Files**:
     - `src/app/api/work-items/[id]/drop/route.ts`
     - `src/app/api/work-items/__tests__/work-items.test.ts`
@@ -173,25 +173,25 @@
 **Goal**: Implement the frontend components, popovers, hover affordances, detail metadata display, and edit/drop confirmation modals.
 * **Independent Test**: Sidebar displays project backlogs. Clicking "+" opens the Add Feature modal. Hover and pencil edit opens the pre-filled Update Feature modal. Details view renders in CenterPanel.
 
-- [ ] T014 [US2] Render project backlog list in src/components/Sidebar.tsx
+- [x] T014 [US2] Render project backlog list in src/components/Sidebar.tsx
   * **Target Files**: [src/components/Sidebar.tsx](file:///D:/Alvin/_CodeProjects/Project_Minna/src/components/Sidebar.tsx)
   * **Expected Behavior**: Indent work items by 20px under their project. Display status indicator dot, 3-digit ID, and slugified title.
   * **Constraints**: Match visual dimensions and spacing in `handoff/minna-feature-management/design_handoff_feature_crud/Minna Prototype.dc.html#L380-L450`.
   * **Validation/Test Location**: Visual check in dev browser.
 
-- [ ] T015 [US2] Render Work Item Details metadata and warnings in src/components/CenterPanel.tsx
+- [x] T015 [US2] Render Work Item Details metadata and warnings in src/components/CenterPanel.tsx
   * **Target Files**: [src/components/CenterPanel.tsx](file:///D:/Alvin/_CodeProjects/Project_Minna/src/components/CenterPanel.tsx)
   * **Expected Behavior**: Modify CenterPanel header and details block to render ID, Title, Description, Type (`feature`), State, Phase (`spec`, `plan`, `tasks`, `spec-review`, etc.), and Assignee (`unassigned` or current value) when selected. If the details brief file is missing, render a warning banner ("Warning: Feature brief not found. Click edit to recreate or attach a new brief.") rather than crashing.
   * **Constraints**: Ensure layout adjusts cleanly for narrow layouts.
   * **Validation/Test Location**: Visual check in dev browser.
 
-- [ ] T016 [US1] [US3] Create Add & Update Feature Modal in src/components/AddUpdateFeatureModal.tsx
+- [x] T016 [US1] [US3] Create Add & Update Feature Modal in src/components/AddUpdateFeatureModal.tsx
   * **Target Files**: `src/components/AddUpdateFeatureModal.tsx` (New file)
   * **Expected Behavior**: Build a centered 520px modal. Display read-only ID, Title input (read-only in update mode, max 50 chars), Description input (max 100 chars, enforce directly), and Details tabs.
   * **Constraints**: Match visual styling, gaps, and button rules in `handoff/minna-feature-management/design_handoff_feature_crud/Minna Prototype.dc.html#L520-L592`. Ensure Save button is disabled if form is not dirty.
   * **Validation/Test Location**: Tested in T019.
 
-- [ ] T017 [US4] Create Drop Feature and Discard changes confirmation modals
+- [x] T017 [US4] Create Drop Feature and Discard changes confirmation modals
   * **Target Files**:
     - `src/components/DropConfirmModal.tsx` (New file)
     - `src/components/DiscardConfirmModal.tsx` (New file)
@@ -201,13 +201,13 @@
   * **Constraints**: Match visual layouts in prototype lines 596-610.
   * **Validation/Test Location**: Tested in T019.
 
-- [ ] T018 Connect global context and add post-create navigation in src/components/WorkspaceProvider.tsx
+- [x] T018 Connect global context and add post-create navigation in src/components/WorkspaceProvider.tsx
   * **Target Files**: [src/components/WorkspaceProvider.tsx](file:///D:/Alvin/_CodeProjects/Project_Minna/src/components/WorkspaceProvider.tsx)
   * **Expected Behavior**: Expose functions to create, patch, and drop features. Ensure that successfully creating a feature triggers selection of that new feature, automatically navigating/scrolling to display it in the `CenterPanel` journal view.
   * **Constraints**: Trigger modal states and backdrop clicks correctly.
   * **Validation/Test Location**: Verify in dev browser.
 
-- [ ] T019 Write frontend modal and sidebar unit tests in src/components/__tests__/AddUpdateFeatureModal.test.tsx
+- [x] T019 Write frontend modal and sidebar unit tests in src/components/__tests__/AddUpdateFeatureModal.test.tsx
   * **Target Files**: `src/components/__tests__/AddUpdateFeatureModal.test.tsx` (New file)
   * **Expected Behavior**: Verify inputs validation (max lengths, dirty checks), tab switches, and discard trigger states.
   * **Validation/Test Location**: Run `npx jest src/components/__tests__/AddUpdateFeatureModal.test.tsx` and assert all tests pass.
@@ -218,24 +218,24 @@
 
 **Purpose**: Version increments, CHANGELOG edits, and mapping updates.
 
-- [ ] T020 Version Bump
+- [x] T020 Version Bump
   * **Target Files**:
     - [package.json](file:///D:/Alvin/_CodeProjects/Project_Minna/package.json)
     - `package-lock.json`
   * **Expected Behavior**: Increment package.json and lockfile version values to `0.5.0` (or appropriate version).
   * **Validation/Test Location**: Verify package integrity.
 
-- [ ] T021 Update Changelog
+- [x] T021 Update Changelog
   * **Target Files**: `CHANGELOG.md`
   * **Expected Behavior**: Document work item backlog, CRUD, details markdown file writing, soft-dropping, and workspace styling features.
   * **Validation/Test Location**: Verify formatting.
 
-- [ ] T022 Update Roadmap
+- [x] T022 Update Roadmap
   * **Target Files**: [docs/feature_roadmap.md](file:///D:/Alvin/_CodeProjects/Project_Minna/docs/feature_roadmap.md)
   * **Expected Behavior**: Insert/mark `003-work-item-management` status as Completed.
   * **Validation/Test Location**: Verify markdown table rendering.
 
-- [ ] T023 Update Documentation maps
+- [x] T023 Update Documentation maps
   * **Target Files**:
     - `README.md`
     - `docs/REPO_MAP.md`

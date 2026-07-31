@@ -9,7 +9,7 @@ export function useModalFocus(dialogRef: RefObject<HTMLElement | null>, initialF
     initialFocusRef.current?.focus();
     const containFocus = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
-      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)") ?? []);
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex='-1'])") ?? []);
       if (focusable.length === 0) return;
       event.preventDefault();
       const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);

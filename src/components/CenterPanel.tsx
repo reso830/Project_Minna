@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { WorkItemEvent } from "../core/types";
+import type { WorkItem, WorkItemEvent } from "../core/types";
 import { SendIcon } from "./icons";
 import { useWorkspace } from "./WorkspaceProvider";
 
@@ -34,7 +34,8 @@ function formatTime(timestamp: string): string {
 }
 
 function featureNumber(id: string): string {
-  return id.split("-").at(-1) ?? id;
+  const number = id.split("-").at(-1) ?? id;
+  return /^\d+$/.test(number) ? number.padStart(3, "0") : number;
 }
 
 function avatarInitial(actor: string): string {
@@ -46,6 +47,10 @@ function avatarInitial(actor: string): string {
 
 function actorLabel(actor: string): string {
   return actor === "claude" ? "agent-1" : actor;
+}
+
+function assigneeLabel(feature: WorkItem): string {
+  return feature.assignee ?? "unassigned";
 }
 
 export function CenterPanel() {
@@ -104,6 +109,19 @@ export function CenterPanel() {
           <button className="journal-tasks-button" type="button">Tasks</button>
         </div>
       </header>
+
+      <section aria-label="Feature details" className="feature-details">
+        <dl>
+          <div><dt>ID</dt><dd>{featureNumber(activeFeature.id)}</dd></div>
+          <div><dt>Title</dt><dd>{activeFeature.title}</dd></div>
+          <div><dt>Description</dt><dd>{activeFeature.description}</dd></div>
+          <div><dt>Type</dt><dd>{activeFeature.work_item_type}</dd></div>
+          <div><dt>State</dt><dd>{activeFeature.state}</dd></div>
+          <div><dt>Phase</dt><dd>{activeFeature.phase}</dd></div>
+          <div><dt>Assignee</dt><dd>{assigneeLabel(activeFeature)}</dd></div>
+        </dl>
+        {activeFeature.feature_brief_missing && <p className="feature-brief-warning">Warning: Feature brief not found. Click edit to recreate or attach a new brief.</p>}
+      </section>
 
       <div aria-label="Journal timeline" className="journal-timeline" ref={timelineRef}>
         {timeline.length === 0 ? (

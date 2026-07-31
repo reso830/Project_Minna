@@ -85,7 +85,7 @@ test("adds a selected directory after preparing its local Minna files", async ()
     name: "Checkout_Redesign",
     path: resolve("/projects/Checkout_Redesign"),
   }) });
-  expect(mockedPrepareProject).toHaveBeenCalledWith(resolve("/projects/Checkout_Redesign"));
+  expect(mockedPrepareProject).toHaveBeenCalledWith(resolve("/projects/Checkout_Redesign"), "checkout-redesign");
 });
 
 test("reopens an already registered path without appending another registration", async () => {
@@ -162,7 +162,7 @@ test("opens a healthy project by recreating its missing local database before re
 
   expect(response.status).toBe(200);
   await expect(response.json()).resolves.toEqual({ success: true, project: checkout });
-  expect(mockedPrepareProject).toHaveBeenCalledWith(checkout.path);
+  expect(mockedPrepareProject).toHaveBeenCalledWith(checkout.path, checkout.id);
 });
 
 test("rejects an edit when the relocation path has invalid project configuration", async () => {

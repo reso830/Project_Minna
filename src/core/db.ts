@@ -7,6 +7,7 @@ import { isWorkItemEventType } from "./work-item-model.js";
 const DEFAULT_DB_PATH = join(".minna", "minna.db");
 
 const EVENT_WORK_ITEM_COLUMNS = ["work_item_id", "summary", "artifact_path"] as const;
+const WORK_ITEM_V3_COLUMNS = ["closed_reason", "feature_brief_path", "spec_path", "plan_path", "tasks_path"] as const;
 
 export function openDb(dbPath = DEFAULT_DB_PATH): DatabaseSync {
   const db = new DatabaseSync(dbPath);
@@ -31,7 +32,78 @@ function migrateEventsWorkItemColumns(db: DatabaseSync): void {
   }
 }
 
-export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
+function migrateWorkItemsColumns(db: DatabaseSync): void {
+  const existingColumns = new Set(
+    (db.prepare("PRAGMA table_info(work_items)").all() as Array<{ name: string }>).map(row => row.name),
+  );
+
+  for (const column of WORK_ITEM_V3_COLUMNS) {
+    if (!existingColumns.has(column)) {
+      db.exec(`ALTER TABLE work_items ADD COLUMN ${column} TEXT`);
+    }
+  }
+}
+
+function fallbackProjectKey(dbPath: string): string {
+  return dirname(dirname(dbPath))
+    .trim()
+    .split(/[\\/]/)
+    .at(-1)
+    ?.toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "project";
+}
+
+function migrateEventsProjectColumn(db: DatabaseSync, dbPath: string, projectKey?: string): void {
+  const existingColumns = new Set(
+    (db.prepare("PRAGMA table_info(events)").all() as Array<{ name: string }>).map(row => row.name),
+  );
+
+  if (existingColumns.has("project")) {
+    return;
+  }
+
+  db.exec("BEGIN IMMEDIATE TRANSACTION");
+  try {
+    // The legacy triggers prevent the backfill UPDATE. Keep their absence contained
+    // within this transaction, then restore append-only protection before commit.
+    db.exec("DROP TRIGGER IF EXISTS prevent_event_update; DROP TRIGGER IF EXISTS prevent_event_delete;");
+    db.exec("ALTER TABLE events ADD COLUMN project TEXT");
+    db.exec(`
+      UPDATE events
+      SET project = (SELECT project FROM work_items WHERE work_items.id = events.work_item_id)
+      WHERE work_item_id IS NOT NULL AND project IS NULL
+    `);
+    db.prepare("UPDATE events SET project = ? WHERE project IS NULL").run(projectKey ?? fallbackProjectKey(dbPath));
+    ensureEventsAppendOnlyTriggers(db);
+    db.exec("COMMIT TRANSACTION");
+  } catch (error) {
+    try {
+      db.exec("ROLLBACK TRANSACTION");
+    } catch {
+      // The failed statement may already have ended the transaction.
+    }
+    throw error;
+  }
+}
+
+function ensureEventsAppendOnlyTriggers(db: DatabaseSync): void {
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS prevent_event_update
+    BEFORE UPDATE ON events
+    BEGIN
+      SELECT RAISE(ROLLBACK, 'Updates are not allowed on the append-only events journal.');
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS prevent_event_delete
+    BEFORE DELETE ON events
+    BEGIN
+      SELECT RAISE(ROLLBACK, 'Deletions are not allowed on the append-only events journal.');
+    END;
+  `);
+}
+
+export async function initDb(dbPath = DEFAULT_DB_PATH, projectKey?: string): Promise<void> {
   await mkdir(dirname(dbPath), { recursive: true });
 
   const db = new DatabaseSync(dbPath);
@@ -46,6 +118,7 @@ export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
         type TEXT NOT NULL,
         payload TEXT NOT NULL,
         work_item_id TEXT,
+        project TEXT,
         summary TEXT,
         artifact_path TEXT
       );
@@ -66,28 +139,25 @@ export async function initDb(dbPath = DEFAULT_DB_PATH): Promise<void> {
         phase TEXT NOT NULL,
         work_item_type TEXT NOT NULL,
         blocked_reason TEXT,
+        closed_reason TEXT,
         assignee TEXT,
         project TEXT NOT NULL,
         branch TEXT,
         pr_url TEXT,
+        feature_brief_path TEXT,
+        spec_path TEXT,
+        plan_path TEXT,
+        tasks_path TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
 
-      CREATE TRIGGER IF NOT EXISTS prevent_event_update
-      BEFORE UPDATE ON events
-      BEGIN
-        SELECT RAISE(ROLLBACK, 'Updates are not allowed on the append-only events journal.');
-      END;
-
-      CREATE TRIGGER IF NOT EXISTS prevent_event_delete
-      BEFORE DELETE ON events
-      BEGIN
-        SELECT RAISE(ROLLBACK, 'Deletions are not allowed on the append-only events journal.');
-      END;
     `);
 
     migrateEventsWorkItemColumns(db);
+    migrateWorkItemsColumns(db);
+    migrateEventsProjectColumn(db, dbPath, projectKey);
+    ensureEventsAppendOnlyTriggers(db);
   } finally {
     db.close();
   }
@@ -273,6 +343,7 @@ type ExpectedWorkItem = {
   state: string;
   phase: string;
   blocked_reason: string | null;
+  closed_reason: string | null;
 };
 
 type StoredWorkItemRow = {
@@ -281,6 +352,7 @@ type StoredWorkItemRow = {
   state: string;
   phase: string;
   blocked_reason: string | null;
+  closed_reason: string | null;
 };
 
 function verifyWorkItemsProjection(db: DatabaseSync): string[] {
@@ -312,6 +384,7 @@ function verifyWorkItemsProjection(db: DatabaseSync): string[] {
         state: String(payload.state ?? ""),
         phase: String(payload.phase ?? ""),
         blocked_reason: (payload.blocked_reason as string | null | undefined) ?? null,
+        closed_reason: (payload.closed_reason as string | null | undefined) ?? null,
       });
     } else if (row.type === "work_item.state_changed") {
       const workItem = expected.get(workItemId);
@@ -319,14 +392,15 @@ function verifyWorkItemsProjection(db: DatabaseSync): string[] {
         discrepancies.push(`Invariant violation: work item '${workItemId}' has a work_item.state_changed event before creation.`);
         continue;
       }
-      workItem.state = String(payload.state ?? "");
-      workItem.phase = String(payload.phase ?? "");
+      workItem.state = String(payload.to ?? payload.state ?? "");
+      if (payload.phase !== undefined) workItem.phase = String(payload.phase);
       workItem.blocked_reason = (payload.blocked_reason as string | null | undefined) ?? null;
+      workItem.closed_reason = (payload.closed_reason as string | null | undefined) ?? null;
     }
   }
 
   const storedRows = db.prepare(
-    "SELECT id, title, state, phase, blocked_reason FROM work_items",
+    "SELECT id, title, state, phase, blocked_reason, closed_reason FROM work_items",
   ).all() as StoredWorkItemRow[];
   const storedById = new Map(storedRows.map(row => [row.id, row]));
 
@@ -336,7 +410,7 @@ function verifyWorkItemsProjection(db: DatabaseSync): string[] {
       discrepancies.push(`Drift detected in work item '${id}': projection row is missing.`);
       continue;
     }
-    for (const field of ["title", "state", "phase", "blocked_reason"] as const) {
+    for (const field of ["title", "state", "phase", "blocked_reason", "closed_reason"] as const) {
       if (stored[field] !== expectedItem[field]) {
         discrepancies.push(
           `Drift detected in work item '${id}': field '${field}' has stored value '${stored[field]}' but replay derived '${expectedItem[field]}'.`,

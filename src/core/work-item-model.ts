@@ -82,6 +82,7 @@ const AGENT_MESSAGE_EVENT_TYPES = new Set<AgentMessageEventType>([
 
 const LIFECYCLE_EVENT_TYPES = new Set<LifecycleEventType>([
   "work_item.created",
+  "work_item.updated",
   "work_item.state_changed",
   "human.decided",
   "human.manual_test_recorded",
