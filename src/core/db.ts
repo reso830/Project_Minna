@@ -12,6 +12,7 @@ const WORK_ITEM_V3_COLUMNS = ["closed_reason", "feature_brief_path", "spec_path"
 export function openDb(dbPath = DEFAULT_DB_PATH): DatabaseSync {
   const db = new DatabaseSync(dbPath);
   db.exec("PRAGMA foreign_keys = ON;");
+  db.exec("PRAGMA busy_timeout = 5000;");
   return db;
 }
 
@@ -42,6 +43,10 @@ function migrateWorkItemsColumns(db: DatabaseSync): void {
       db.exec(`ALTER TABLE work_items ADD COLUMN ${column} TEXT`);
     }
   }
+}
+
+function migrateLegacyWorkItemPhases(db: DatabaseSync): void {
+  db.prepare("UPDATE work_items SET phase = 'spec-review' WHERE phase = 'requirements-review'").run();
 }
 
 function fallbackProjectKey(dbPath: string): string {
@@ -156,6 +161,7 @@ export async function initDb(dbPath = DEFAULT_DB_PATH, projectKey?: string): Pro
 
     migrateEventsWorkItemColumns(db);
     migrateWorkItemsColumns(db);
+    migrateLegacyWorkItemPhases(db);
     migrateEventsProjectColumn(db, dbPath, projectKey);
     ensureEventsAppendOnlyTriggers(db);
   } finally {

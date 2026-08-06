@@ -43,7 +43,7 @@ test("migrates legacy work-items and events schemas without losing rows", async 
     `);
     legacy.prepare(
       "INSERT INTO work_items VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    ).run("001", "legacy-item", "legacy", "parked", "spec", "feature", null, null, "registry-project", null, null, "2026-07-31T00:00:00.000Z", "2026-07-31T00:00:00.000Z");
+    ).run("001", "legacy-item", "legacy", "parked", "requirements-review", "feature", null, null, "registry-project", null, null, "2026-07-31T00:00:00.000Z", "2026-07-31T00:00:00.000Z");
     legacy.prepare(
       "INSERT INTO events (timestamp, actor, type, payload, work_item_id, summary, artifact_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
     ).run("2026-07-31T00:00:00.000Z", "human", "work_item.created", "{}", "001", "legacy event", null);
@@ -63,6 +63,7 @@ test("migrates legacy work-items and events schemas without losing rows", async 
       );
       assert.equal((migrated.prepare("SELECT project FROM events WHERE id = 1").get() as { project: string }).project, "registry-project");
       assert.equal((migrated.prepare("SELECT title FROM work_items WHERE id = '001'").get() as { title: string }).title, "legacy-item");
+      assert.equal((migrated.prepare("SELECT phase FROM work_items WHERE id = '001'").get() as { phase: string }).phase, "spec-review");
     } finally {
       migrated.close();
     }

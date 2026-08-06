@@ -138,6 +138,9 @@ test("returns the committed work item when the update brief rename is temporaril
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(expect.objectContaining({ workItem: expect.objectContaining({ description: "Updated description." }) }));
+    const listed = await GET(new Request(`http://localhost/api/work-items?project=${project.id}`));
+    expect(listed.status).toBe(200);
+    await expect(readFile(join(project.path, ".minna", "features", "001-locked-update.md"), "utf8")).resolves.toBe("updated");
   });
 });
 
@@ -199,7 +202,7 @@ test("drops a work item, preserves its brief, and records the canonical state tr
       const events = await readWorkItemEvents(db, "001");
       expect(events.at(-1)).toEqual(expect.objectContaining({
         type: "work_item.state_changed",
-        payload: { from: "parked", to: "closed", blocked_reason: null, closed_reason: "dropped" },
+        payload: { from: "parked", to: "closed", phase: "spec", blocked_reason: null, closed_reason: "dropped" },
       }));
     } finally {
       db.close();

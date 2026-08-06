@@ -158,7 +158,7 @@ async function recoverBrief(item: WorkItem, projectPath?: string): Promise<WorkI
   }
   const final = join(projectPath, item.feature_brief_path);
   const temporary = join(projectPath, ".minna", "features", `.${item.id}-${item.title}.tmp`);
-  if (!(await exists(final)) && await exists(temporary)) {
+  if (await exists(temporary)) {
     await promoteBrief(temporary, final);
   }
   return { ...item, feature_brief_missing: !(await exists(final)) };
@@ -191,29 +191,31 @@ export async function createWorkItem(db: DatabaseSync, actor: WorkItemActor, inp
   assertPhaseBelongsToType(input.work_item_type, phase);
   assertBlockedReasonConsistency(state, blockedReason);
 
-  const id = input.id ?? nextWorkItemId(db);
-  const paths = input.details_text === undefined || !input.project_path
-    ? undefined
-    : briefPaths(input.project_path, id, title);
-  if (paths) {
-    await mkdir(paths.directory, { recursive: true });
-    await writeFile(paths.temporary, input.details_text!, "utf8");
-  }
-
   const timestamp = new Date().toISOString();
+  let id: string;
+  let paths: ReturnType<typeof briefPaths> | undefined;
   let committed = false;
 
   db.exec("BEGIN IMMEDIATE TRANSACTION");
   try {
+    id = input.id ?? nextWorkItemId(db);
+    paths = input.details_text === undefined || !input.project_path
+      ? undefined
+      : briefPaths(input.project_path, id, title);
+    if (paths) {
+      await mkdir(paths.directory, { recursive: true });
+      await writeFile(paths.temporary, input.details_text!, "utf8");
+    }
+
     const existing = db.prepare("SELECT 1 FROM work_items WHERE id = ?").get(id);
     if (existing) {
       throw new Error(`Work item '${id}' already exists.`);
     }
 
     db.prepare(
-      `INSERT INTO events (timestamp, actor, type, payload, work_item_id, summary, artifact_path)
-       VALUES (?, ?, 'work_item.created', ?, ?, ?, NULL)`,
-    ).run(timestamp, actor, JSON.stringify({ id, title, description: input.description, work_item_type: input.work_item_type, project: input.project, state, phase, blocked_reason: blockedReason }), id, `Created: ${title}`);
+      `INSERT INTO events (timestamp, actor, type, payload, project, work_item_id, summary, artifact_path)
+       VALUES (?, ?, 'work_item.created', ?, ?, ?, ?, NULL)`,
+    ).run(timestamp, actor, JSON.stringify({ id, title, description: input.description, work_item_type: input.work_item_type, project: input.project, state, phase, blocked_reason: blockedReason }), input.project, id, `Created: ${title}`);
 
     db.prepare(
       `INSERT INTO work_items (id, title, description, state, phase, work_item_type, blocked_reason, closed_reason, assignee, project, branch, pr_url,
@@ -237,7 +239,7 @@ export async function createWorkItem(db: DatabaseSync, actor: WorkItemActor, inp
   if (paths) {
     await promoteBrief(paths.temporary, paths.final);
   }
-  return readWorkItemRow(db, id, input.project_path);
+  return readWorkItemRow(db, id!, input.project_path);
 }
 
 export async function updateWorkItem(
@@ -261,9 +263,9 @@ export async function updateWorkItem(
   db.exec("BEGIN IMMEDIATE TRANSACTION");
   try {
     db.prepare(
-      `INSERT INTO events (timestamp, actor, type, payload, work_item_id, summary, artifact_path)
-       VALUES (?, ?, 'work_item.updated', ?, ?, ?, ?)`,
-    ).run(timestamp, actor, JSON.stringify({ description: input.description }), id, "Updated work item description.", paths?.relative ?? current.feature_brief_path ?? null);
+      `INSERT INTO events (timestamp, actor, type, payload, project, work_item_id, summary, artifact_path)
+       VALUES (?, ?, 'work_item.updated', ?, ?, ?, ?, ?)`,
+    ).run(timestamp, actor, JSON.stringify({ description: input.description }), current.project, id, "Updated work item description.", paths?.relative ?? current.feature_brief_path ?? null);
     db.prepare(
       "UPDATE work_items SET description = ?, feature_brief_path = ?, updated_at = ? WHERE id = ?",
     ).run(input.description, paths?.relative ?? current.feature_brief_path ?? null, timestamp, id);
@@ -302,9 +304,9 @@ export async function updateWorkItemState(
   db.exec("BEGIN TRANSACTION");
   try {
     db.prepare(
-      `INSERT INTO events (timestamp, actor, type, payload, work_item_id, summary, artifact_path)
-       VALUES (?, ?, 'work_item.state_changed', ?, ?, ?, NULL)`,
-    ).run(timestamp, actor, JSON.stringify({ from: current.state, to: next.state, blocked_reason: blockedReason, closed_reason: closedReason }), id, `State changed to '${next.state}'`);
+      `INSERT INTO events (timestamp, actor, type, payload, project, work_item_id, summary, artifact_path)
+       VALUES (?, ?, 'work_item.state_changed', ?, ?, ?, ?, NULL)`,
+    ).run(timestamp, actor, JSON.stringify({ from: current.state, to: next.state, phase, blocked_reason: blockedReason, closed_reason: closedReason }), current.project, id, `State changed to '${next.state}'`);
 
     const result = db.prepare(
       `UPDATE work_items SET state = ?, phase = ?, blocked_reason = ?, closed_reason = ?, updated_at = ? WHERE id = ?`,
@@ -328,12 +330,16 @@ export async function appendWorkItemEvent(
   input: AppendWorkItemEventInput,
 ): Promise<WorkItemEvent & { id: number }> {
   const timestamp = new Date().toISOString();
+  const workItem = db.prepare("SELECT project FROM work_items WHERE id = ?").get(input.work_item_id) as { project: string } | undefined;
+  if (!workItem) {
+    throw new Error(`Work item '${input.work_item_id}' was not found.`);
+  }
   const result = db.prepare(
-    `INSERT INTO events (timestamp, actor, type, payload, work_item_id, summary, artifact_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO events (timestamp, actor, type, payload, project, work_item_id, summary, artifact_path)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     timestamp, input.actor, input.type, JSON.stringify(input.payload ?? {}),
-    input.work_item_id, input.summary, input.artifact_path ?? null,
+    workItem.project, input.work_item_id, input.summary, input.artifact_path ?? null,
   );
 
   return {

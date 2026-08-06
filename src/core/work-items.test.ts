@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { initDb } from "./db.js";
@@ -27,6 +29,26 @@ async function withScratchDb(run: (db: DatabaseSync) => Promise<void>): Promise<
     db?.close();
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+function runConcurrentWorkItemWriter(dbPath: string, projectPath: string, description: string): Promise<void> {
+  const databaseModule = pathToFileURL(join(process.cwd(), "dist", "core", "db.js")).href;
+  const workItemsModule = pathToFileURL(join(process.cwd(), "dist", "core", "work-items.js")).href;
+  const input = { title: "Concurrent brief", description, work_item_type: "feature", project: "concurrent", project_path: projectPath, details_text: description };
+  const script = [
+    `import { openDb } from ${JSON.stringify(databaseModule)};`,
+    `import { createWorkItem } from ${JSON.stringify(workItemsModule)};`,
+    `const db = openDb(${JSON.stringify(dbPath)});`,
+    `try { await createWorkItem(db, "human", ${JSON.stringify(input)}); } finally { db.close(); }`,
+  ].join("\n");
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ["--input-type=module", "--eval", script]);
+    let stderr = "";
+    child.stderr.on("data", chunk => { stderr += String(chunk); });
+    child.on("error", reject);
+    child.on("exit", code => code === 0 ? resolve() : reject(new Error(stderr || `work-item writer exited with code ${code}`)));
+  });
 }
 
 test("creating a feature work item defaults to the first phase of the full 7-phase sequence", async () => {
@@ -129,6 +151,32 @@ test("rejects blocked state without a blocked_reason", async () => {
       /blocked_reason/i,
     );
   });
+});
+
+test("concurrent creators allocate distinct sequential IDs and preserve both briefs", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "minna-concurrent-work-items-"));
+  const dbPath = join(directory, ".minna", "minna.db");
+  try {
+    await initDb(dbPath);
+    await Promise.all([
+      runConcurrentWorkItemWriter(dbPath, directory, "first brief"),
+      runConcurrentWorkItemWriter(dbPath, directory, "second brief"),
+    ]);
+
+    const db = new DatabaseSync(dbPath);
+    try {
+      const items = await readWorkItems(db, { project: "concurrent", project_path: directory });
+      assert.deepEqual(items.map(item => item.id), ["001", "002"]);
+      assert.deepEqual(
+        new Set(await Promise.all(items.map(item => readFile(join(directory, item.feature_brief_path!), "utf8")))),
+        new Set(["first brief", "second brief"]),
+      );
+    } finally {
+      db.close();
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 test("rejects a title whose slug exceeds 50 characters", async () => {
