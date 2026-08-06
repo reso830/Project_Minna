@@ -248,7 +248,7 @@
 
 **Purpose**: Perform end-to-end user checks in a real browser against the build state.
 
-- [ ] T024 E2E Browser Smoke Testing
+- [x] T024 E2E Browser Smoke Testing
   * **Target Component**: Sidebar & modal dialogs
   * **Expected Behavior**: Build project (`npm run build`), run dev server (`npm run dev`), open browser and verify:
     1. Hover project, click "+", select Add Feature. Fill details and verify `001-slug-title` is created, selected, and the app automatically navigates to select the feature in the details pane.
