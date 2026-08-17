@@ -56,15 +56,15 @@ describe("CenterPanel", () => {
 
     expect(screen.getByText("✓ Approve changes")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Keep current policy" })).not.toBeInTheDocument();
-    expect(screen.getByText("active")).toBeInTheDocument();
+    expect(screen.getAllByText("active").length).toBeGreaterThan(0);
   });
 
-  it("does not add a phase chip to the handoff journal header", () => {
+  it("shows the selected feature metadata separately from the journal header", () => {
     renderPanel("checkout-redesign-001");
     fireEvent.click(screen.getByRole("button", { name: "Select feature" }));
 
-    expect(screen.getByText("active")).toBeInTheDocument();
-    expect(screen.queryByText("implement")).not.toBeInTheDocument();
+    expect(screen.getByText("active", { selector: ".journal-status" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Feature details")).toHaveTextContent("Phaseimplement");
   });
 
   it("renders the domain agent as the handoff's agent-1 label", () => {

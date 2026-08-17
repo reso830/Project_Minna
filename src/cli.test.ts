@@ -100,11 +100,11 @@ test("start-feature creates a work item and status reports it", async () => {
   try {
     const created = await runCli(dir, "start-feature", "--project", "celia", "--title", "New thing");
     assert.equal(created.exitCode, 0);
-    assert.match(created.stdout, /^Created celia-new-thing-\d+ \| parked \| spec$/m);
+    assert.match(created.stdout, /^Created 001 \| parked \| spec$/m);
 
     const statusResult = await runCli(dir, "status");
     assert.equal(statusResult.exitCode, 0);
-    assert.match(statusResult.stdout, /celia-new-thing-\d+ \| celia \| spec \| New thing/);
+    assert.match(statusResult.stdout, /001 \| celia \| spec \| new-thing/);
     assert.match(statusResult.stdout, /state: parked/);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -155,7 +155,7 @@ test("commands run from a project subdirectory use the project-root journal", as
     const status = await runCli(nested, "status");
 
     assert.equal(status.exitCode, 0);
-    assert.match(status.stdout, /Root journal item/);
+    assert.match(status.stdout, /001 \| .* \| spec \| root-journal-item/);
     await assert.rejects(() => access(join(nested, ".minna", "minna.db")));
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -194,7 +194,7 @@ test("start-feature accepts an arbitrary --project label without registry resolu
   try {
     const created = await runCli(dir, "start-feature", "--project", "unregistered-label", "--title", "Verbatim project");
     assert.equal(created.exitCode, 0);
-    assert.match(created.stdout, /^Created unregistered-label-verbatim-project-\d+ \| parked \| spec$/m);
+    assert.match(created.stdout, /^Created 001 \| parked \| spec$/m);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -293,7 +293,7 @@ test("log and export work for a work item created via start-feature", async () =
 
     const exported = await runCli(dir, "export", "--feature", id!, exportDir);
     assert.equal(exported.exitCode, 0);
-    assert.match(await readFile(join(exportDir, "journal.md"), "utf8"), /# Work Item Journal: Loggable item/);
+    assert.match(await readFile(join(exportDir, "journal.md"), "utf8"), /# Work Item Journal: loggable-item/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -310,7 +310,7 @@ test("start-feature resolves and migrates the project from legacy configuration 
 
     const created = await runCli(dir, "start-feature", "--title", "Embedded item");
     assert.equal(created.exitCode, 0);
-    assert.match(created.stdout, new RegExp(`^Created ${basename(dir).toLowerCase()}-embedded-item-\\d+ \\| parked \\| spec$`, "m"));
+    assert.match(created.stdout, /^Created 001 \| parked \| spec$/m);
     await access(join(dir, ".minna", "config.yaml"));
     await assert.rejects(() => access(join(dir, "minna.project.yaml")));
   } finally {

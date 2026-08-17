@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Project Unavailable", details: health.error }, { status: 410 });
     }
 
-    await prepareProject(project.path);
+    await prepareProject(project.path, project.id);
     return NextResponse.json({ success: true, project: await openRegisteredProject(id) });
   } catch (error) {
     return NextResponse.json({ error: "Internal Server Error", details: String(error) }, { status: 500 });

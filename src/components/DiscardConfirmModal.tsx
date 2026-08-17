@@ -27,3 +27,23 @@ export function DiscardConfirmModal({ onDiscard, onKeepEditing }: DiscardConfirm
     </div>
   );
 }
+
+export function DiscardFeatureConfirmModal({ onDiscard, onKeepEditing }: DiscardConfirmModalProps) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const keepEditingButtonRef = useRef<HTMLButtonElement>(null);
+  useModalFocus(dialogRef, keepEditingButtonRef);
+
+  return (
+    <div className="feature-modal-backdrop">
+      <section aria-label="Discard this feature?" aria-modal="true" className="feature-confirm-modal" ref={dialogRef} role="dialog">
+        <h2>Discard this feature?</h2>
+        <p>You have unsaved changes. Discard them?</p>
+        <div className="feature-modal-actions">
+          <span />
+          <button onClick={onKeepEditing} ref={keepEditingButtonRef} type="button">Keep Editing</button>
+          <button className="feature-button--danger" onClick={onDiscard} type="button">Discard</button>
+        </div>
+      </section>
+    </div>
+  );
+}

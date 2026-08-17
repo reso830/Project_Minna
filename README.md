@@ -36,8 +36,7 @@ npm run start:cli -- export --feature <id> ./specs/001-event-journal
 
 ## Journal View Workspace
 
-The Journal View is a local Next.js workspace backed by representative mock data;
-it does not require a database, external API, or agent runtime.
+The Journal View is a local Next.js workspace connected to local project database REST API endpoints, allowing you to manage backlogs, edit descriptions, view event timelines, and drop features.
 
 ```bash
 npm run dev                 # Development UI at http://localhost:3000
@@ -86,14 +85,12 @@ Use the Add Project interface in the local web application at `http://localhost:
 
 ## Scaffold Gaps
 
-This first version intentionally leaves a few parts as explicit follow-up work:
+This version handles work-item management, details brief file normalization, and soft-dropping. A few limitations remain as explicit follow-up work:
 
-- Work-item transition legality (which phase/state changes are allowed) is not
-  enforced yet; `start-feature`/`record-decision`/`record-manual-test` write
-  directly.
-- The M1 source of truth is the local SQLite journal at `.minna/minna.db`; its
-  `features` and `work_items` tables are projections of append-only events.
-- Concurrent SQLite writers are not yet handled; M1 is intentionally single-operator.
+- **Work-Item Transition Legality**: While the soft-drop ("Drop Feature") transition is now validated, other general phase and state transitions in the state model are not yet structurally enforced at the database layer.
+- **Concurrent SQLite Writers**: Concurrent writers on the local project database (`minna.db`) are not yet fully optimized (e.g. WAL mode and busy timeouts are not configured on the project database connection). While immediate transactions prevent duplicate-ID races from corrupting data, concurrent CLI and web UI writes remain subject to temporary locking under higher write contention.
+- **Agent Loops**: Enforcing automated agent execution loop transitions.
+- **Visual Boards**: Visual Kanban or board views.
 
 ## Event Journal
 

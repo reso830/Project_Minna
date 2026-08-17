@@ -13,7 +13,7 @@ import {
   updateFeatureStatus,
   verifyDb,
 } from "./db.js";
-import { appendWorkItemEvent, createWorkItem, updateWorkItemState } from "./work-items.js";
+import { appendWorkItemEvent, createWorkItem, updateWorkItem, updateWorkItemState } from "./work-items.js";
 
 async function withScratchDb(run: (db: DatabaseSync) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), "minna-journal-write-"));
@@ -136,6 +136,24 @@ test("verifyDb does not flag work-item journal events as unsupported", async () 
     assert.equal(result.consistent, true);
     assert.deepEqual(result.discrepancies, []);
     assert.equal(result.workItemCount, 1);
+  });
+});
+
+test("records a project key and phase in every new work-item journal event", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", {
+      id: "event-project-wi", title: "t", description: "d", work_item_type: "feature", project: "p",
+    });
+    await updateWorkItem(db, "human", "event-project-wi", { description: "updated" });
+    await updateWorkItemState(db, "minna", "event-project-wi", { state: "active", phase: "plan" });
+    await appendWorkItemEvent(db, {
+      work_item_id: "event-project-wi", actor: "human", type: "human.decided", summary: "Decided.", payload: {},
+    });
+
+    const events = db.prepare("SELECT type, project, payload FROM events WHERE work_item_id = ? ORDER BY id ASC").all("event-project-wi") as Array<{ type: string; project: string | null; payload: string }>;
+    assert.deepEqual(events.map(event => event.project), ["p", "p", "p", "p"]);
+    assert.equal(JSON.parse(events.find(event => event.type === "work_item.state_changed")!.payload).phase, "plan");
+    assert.equal((await verifyDb(db)).consistent, true);
   });
 });
 

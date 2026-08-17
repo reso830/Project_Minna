@@ -68,7 +68,7 @@ export async function syncProjectContext(
   if (!health.available) {
     throw new Error(`Project directory is unavailable: ${health.error}`);
   }
-  await prepareProject(context.project.path);
+  await prepareProject(context.project.path, context.key);
   await registerProject({
     id: context.key,
     name: context.project.name,

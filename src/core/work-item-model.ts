@@ -13,7 +13,7 @@ const PHASE_GROUP_BY_PHASE: Record<Phase, PhaseGroup> = {
   spec: "define",
   plan: "define",
   tasks: "define",
-  "requirements-review": "define",
+  "spec-review": "define",
   implement: "create",
   review: "create",
   integrate: "integrate",
@@ -27,7 +27,7 @@ export const FEATURE_PHASE_SEQUENCE: Phase[] = [
   "spec",
   "plan",
   "tasks",
-  "requirements-review",
+  "spec-review",
   "implement",
   "review",
   "integrate",
@@ -82,6 +82,7 @@ const AGENT_MESSAGE_EVENT_TYPES = new Set<AgentMessageEventType>([
 
 const LIFECYCLE_EVENT_TYPES = new Set<LifecycleEventType>([
   "work_item.created",
+  "work_item.updated",
   "work_item.state_changed",
   "human.decided",
   "human.manual_test_recorded",

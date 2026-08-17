@@ -8,6 +8,9 @@ import { ErrorModal } from "./ErrorModal";
 import { DiscardConfirmModal } from "./DiscardConfirmModal";
 import { EditProjectModal } from "./EditProjectModal";
 import { RemoveConfirmModal } from "./RemoveConfirmModal";
+import { AddUpdateFeatureModal, type FeatureDraft } from "./AddUpdateFeatureModal";
+import { DropConfirmModal } from "./DropConfirmModal";
+import { DiscardFeatureConfirmModal } from "./DiscardConfirmModal";
 
 type RightTab = "agents" | "md" | "diff";
 type WorkspaceView = "journal" | "board";
@@ -34,6 +37,8 @@ interface WorkspaceContextValue {
   toggleAgent: (agentId: string) => void;
   submitReply: (featureId: string, text: string) => void;
   submitDecision: (featureId: string, decisionId: string, option: string) => void;
+  createFeature: (project: ProjectRegistryEntry) => void;
+  editFeature: (feature: WorkItem) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -91,6 +96,14 @@ const pickerErrorDetails = async (response: Response): Promise<string> => {
   return typeof error === "string" ? error : "The native directory picker could not be opened.";
 };
 
+const isWorkItem = (value: unknown): value is WorkItem => {
+  if (typeof value !== "object" || value === null) return false;
+  const item = value as Partial<WorkItem>;
+  return typeof item.id === "string" && typeof item.title === "string" && typeof item.project === "string";
+};
+
+const projectMatchesFeature = (project: ProjectRegistryEntry, feature: WorkItem) => feature.project === project.id || feature.project === project.name;
+
 export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [activeFeatureId, setActiveFeatureId] = useState<string | null>(defaultFeatureId);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -106,6 +119,9 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [editingProject, setEditingProject] = useState<ProjectRegistryEntry | null>(null);
   const [removingProject, setRemovingProject] = useState<ProjectRegistryEntry | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [featureEditor, setFeatureEditor] = useState<{ project: ProjectRegistryEntry; feature?: WorkItem } | null>(null);
+  const [confirmFeatureDiscard, setConfirmFeatureDiscard] = useState(false);
+  const [confirmFeatureDrop, setConfirmFeatureDrop] = useState(false);
 
   useEffect(() => {
     const storedFeatureId = window.sessionStorage.getItem("minna_active_feature_id");
@@ -167,6 +183,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
             const merged = mergeProject(openedProject, current);
             return sortProjects([merged, ...current.filter((project) => project.id !== merged.id)]);
           });
+          void loadProjectFeatures(openedProject);
         }
         setActiveProjectId((current) => current ?? openedProject?.id ?? defaultProject.id);
       } catch {
@@ -174,6 +191,19 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       }
     })();
   }, []);
+
+  const loadProjectFeatures = async (project: ProjectRegistryEntry) => {
+    try {
+      const response = await fetch(`/api/work-items?project=${encodeURIComponent(project.id)}`);
+      if (!response.ok) return;
+      const data: unknown = await response.json();
+      if (!Array.isArray(data) || !data.every(isWorkItem)) return;
+      setFeatures(current => [...current.filter(feature => !projectMatchesFeature(project, feature)), ...data]);
+      setEvents(current => ({ ...current, ...Object.fromEntries(data.map(feature => [feature.id, current[feature.id] ?? []])) }));
+    } catch {
+      // Existing local/demo state remains visible while the project database is unavailable.
+    }
+  };
 
   const value = useMemo<WorkspaceContextValue>(() => ({
     activeFeatureId,
@@ -188,8 +218,8 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     resolvedDecisions,
     selectFeature: (featureId) => {
       setActiveFeatureId(featureId);
-      const projectName = features.find((feature) => feature.id === featureId)?.project;
-      const project = projects.find((candidate) => candidate.name === projectName);
+      const selected = features.find((feature) => feature.id === featureId);
+      const project = selected && projects.find((candidate) => projectMatchesFeature(candidate, selected));
       if (project) setActiveProjectId(project.id);
       setActiveView("journal");
       window.sessionStorage.setItem("minna_active_feature_id", featureId);
@@ -251,6 +281,12 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
         return sortProjects([merged, ...current.filter((candidate) => candidate.id !== merged.id)]);
       });
       setActiveProjectId(project.id);
+      await loadProjectFeatures(project);
+    },
+    createFeature: (project) => setFeatureEditor({ project }),
+    editFeature: (feature) => {
+      const project = projects.find(candidate => projectMatchesFeature(candidate, feature));
+      if (project) setFeatureEditor({ project, feature });
     },
     editProject: (project) => setEditingProject(project),
     requestProjectRemoval: (project) => setRemovingProject(project),
@@ -306,6 +342,59 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       window.sessionStorage.setItem(`minna_replies_${featureId}`, JSON.stringify([...replies, confirmation]));
     },
   }), [activeFeatureId, activeProjectId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, projects, resolvedDecisions]);
+
+  const saveFeature = async (draft: FeatureDraft) => {
+    if (!featureEditor) return;
+    const { project, feature } = featureEditor;
+    const endpoint = feature ? `/api/work-items/${feature.id}` : "/api/work-items";
+    const method = feature ? "PATCH" : "POST";
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project: project.id, title: draft.title, description: draft.description, detailsText: draft.detailsText || undefined, attachedFileName: draft.attachedFileName || undefined, attachedFileContent: draft.attachedFileContent || undefined }),
+      });
+      const data: unknown = await response.json();
+      const workItem = (data as { workItem?: unknown }).workItem;
+      if (!response.ok || !isWorkItem(workItem)) {
+        setValidationError((data as { message?: unknown }).message as string ?? "The feature could not be saved.");
+        return;
+      }
+      setFeatures(current => [...current.filter(candidate => candidate.id !== workItem.id), workItem]);
+      setEvents(current => ({ ...current, [workItem.id]: current[workItem.id] ?? [] }));
+      setExpandedProjects(current => ({ ...current, [project.id]: true }));
+      setActiveProjectId(project.id);
+      setActiveFeatureId(workItem.id);
+      setActiveView("journal");
+      setFeatureEditor(null);
+    } catch {
+      setValidationError("The feature could not be saved.");
+    }
+  };
+
+  const dropFeature = async () => {
+    const feature = featureEditor?.feature;
+    const project = featureEditor?.project;
+    if (!feature || !project) return;
+    try {
+      const response = await fetch(`/api/work-items/${feature.id}/drop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ project: project.id }) });
+      const data: unknown = await response.json();
+      const workItem = (data as { workItem?: unknown }).workItem;
+      if (!response.ok || !isWorkItem(workItem)) {
+        setValidationError((data as { message?: unknown }).message as string ?? "The feature could not be dropped.");
+        return;
+      }
+      setFeatures(current => current.map(candidate => candidate.id === workItem.id ? workItem : candidate));
+      if (activeFeatureId === workItem.id) {
+        const fallback = features.find(candidate => candidate.id !== workItem.id && projectMatchesFeature(project, candidate));
+        setActiveFeatureId(fallback?.id ?? null);
+      }
+      setConfirmFeatureDrop(false);
+      setFeatureEditor(null);
+    } catch {
+      setValidationError("The feature could not be dropped.");
+    }
+  };
 
   const selectProjectPath = async (): Promise<string | null> => {
     try {
@@ -364,7 +453,8 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
         return remaining;
       });
       if (activeProjectId === removingProject.id) setActiveProjectId(null);
-      if (features.find((feature) => feature.id === activeFeatureId)?.project === removingProject.name) {
+      const activeFeature = features.find((feature) => feature.id === activeFeatureId);
+      if (activeFeature && projectMatchesFeature(removingProject, activeFeature)) {
         setActiveFeatureId(null);
         setActiveView("journal");
       }
@@ -382,6 +472,17 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       {editingProject && <EditProjectModal active={!removingProject} onCancel={(dirty) => dirty ? setConfirmDiscard(true) : setEditingProject(null)} onRemove={() => setRemovingProject(editingProject)} onSave={saveProject} onSelectPath={selectProjectPath} project={editingProject} />}
       {removingProject && <RemoveConfirmModal name={removingProject.name} onCancel={() => setRemovingProject(null)} onRemove={() => void removeProject()} />}
       {confirmDiscard && <DiscardConfirmModal onDiscard={() => { setConfirmDiscard(false); setEditingProject(null); }} onKeepEditing={() => setConfirmDiscard(false)} />}
+      {featureEditor && <AddUpdateFeatureModal
+        feature={featureEditor.feature}
+        mode={featureEditor.feature ? "update" : "create"}
+        nextId={String(Math.max(0, ...features.filter(feature => projectMatchesFeature(featureEditor.project, feature)).map(feature => Number(feature.id) || 0)) + 1).padStart(3, "0")}
+        onCancel={(dirty) => dirty ? setConfirmFeatureDiscard(true) : setFeatureEditor(null)}
+        onDrop={() => setConfirmFeatureDrop(true)}
+        onSave={(draft) => void saveFeature(draft)}
+        projectName={featureEditor.project.name}
+      />}
+      {confirmFeatureDiscard && <DiscardFeatureConfirmModal onDiscard={() => { setConfirmFeatureDiscard(false); setFeatureEditor(null); }} onKeepEditing={() => setConfirmFeatureDiscard(false)} />}
+      {confirmFeatureDrop && featureEditor?.feature && <DropConfirmModal onCancel={() => setConfirmFeatureDrop(false)} onDrop={() => void dropFeature()} title={featureEditor.feature.title} />}
     </WorkspaceContext.Provider>
   );
 }

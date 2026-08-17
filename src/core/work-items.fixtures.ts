@@ -9,8 +9,8 @@ export const FIXTURE_WORK_ITEMS: CreateWorkItemInput[] = [
     assignee: "codex", project: "celia",
   },
   {
-    id: "celia-027", title: "Approved spec awaiting the gate", description: "Spec cleared clarify; waiting on the requirements-review gate.",
-    state: "active", phase: "requirements-review", work_item_type: "feature",
+    id: "celia-027", title: "Approved spec awaiting the gate", description: "Spec cleared clarify; waiting on the spec-review gate.",
+    state: "active", phase: "spec-review", work_item_type: "feature",
     assignee: "claude", project: "celia",
   },
   {

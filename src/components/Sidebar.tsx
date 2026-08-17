@@ -3,12 +3,13 @@
 import Image from "next/image";
 
 import { AgentUsage } from "./AgentUsage";
-import { ChevronIcon, EllipsisIcon, PlusIcon, RemoveIcon, SettingsIcon, ViewToggleIcon } from "./icons";
+import { ChevronIcon, EllipsisIcon, PencilIcon, PlusIcon, RemoveIcon, SettingsIcon, ViewToggleIcon } from "./icons";
 import { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "./WorkspaceProvider";
 
 function featureNumber(id: string): string {
-  return id.split("-").at(-1) ?? id;
+  const number = id.split("-").at(-1) ?? id;
+  return /^\d+$/.test(number) ? number.padStart(3, "0") : number;
 }
 
 export function Sidebar() {
@@ -16,6 +17,8 @@ export function Sidebar() {
     activeFeatureId,
     activeProjectId,
     addProject,
+    createFeature,
+    editFeature,
     editProject,
     expandedProjects,
     features,
@@ -58,7 +61,7 @@ export function Sidebar() {
       <nav aria-label="Projects" className="sidebar-projects">
         {projects.map((project) => {
           const isExpanded = expandedProjects[project.id] ?? false;
-          const projectFeatures = features.filter((feature) => feature.project === project.name);
+          const projectFeatures = features.filter((feature) => feature.project === project.id || feature.project === project.name);
           const hasBlockedChild = !isExpanded && projectFeatures.some((feature) => feature.state === "blocked");
           const isSelected = activeProjectId === project.id || projectFeatures.some((feature) => feature.id === activeFeatureId);
 
@@ -90,7 +93,7 @@ export function Sidebar() {
                 <button
                   aria-label={`Add feature to ${project.name}`}
                   className="sidebar-add-feature"
-                  onClick={(event) => event.stopPropagation()}
+                  onClick={(event) => { event.stopPropagation(); createFeature(project); }}
                   type="button"
                 >
                   <PlusIcon size={12} />
@@ -99,18 +102,17 @@ export function Sidebar() {
               {isExpanded && (
                 <div className="sidebar-feature-list">
                   {projectFeatures.length === 0 ? <span className="sidebar-empty-project">No features found</span> : projectFeatures.map((feature) => (
-                    <button
-                      aria-pressed={activeFeatureId === feature.id}
-                      aria-label={`${feature.title}, ${feature.state}`}
-                      className={`sidebar-feature sidebar-feature--${feature.state}`}
+                    <div
+                      className={`sidebar-feature sidebar-feature--${feature.state}${activeFeatureId === feature.id ? " sidebar-feature--selected" : ""}`}
                       key={feature.id}
-                      onClick={() => selectFeature(feature.id)}
-                      type="button"
                     >
-                      <span aria-hidden="true" className="feature-state-dot" />
-                      <span className="sidebar-feature-id">{featureNumber(feature.id)}</span>
-                      <span className="sidebar-feature-title">{feature.title}</span>
-                    </button>
+                      <button aria-label={`${feature.title}, ${feature.state}`} aria-pressed={activeFeatureId === feature.id} className="sidebar-feature-select" onClick={() => selectFeature(feature.id)} type="button">
+                        <span aria-hidden="true" className="feature-state-dot" />
+                        <span className="sidebar-feature-id">{featureNumber(feature.id)}</span>
+                        <span className="sidebar-feature-title">{feature.title}</span>
+                      </button>
+                      <button aria-label={`Edit ${feature.title}`} className="sidebar-edit-feature" onClick={(event) => { event.stopPropagation(); editFeature(feature); }} type="button"><PencilIcon /></button>
+                    </div>
                   ))}
                 </div>
               )}

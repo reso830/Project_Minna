@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 — Work Item Management
+
+- Added local project SQLite table schema migrations to support the work_items projection columns (closed_reason, feature_brief_path, spec_path, plan_path, tasks_path) and backfill the Events project column.
+- Added a unified Repository pattern (IWorkItemsRepository, IEventsRepository) to cleanly isolate database reads/writes from the application controllers.
+- Added sequential, project-scoped 3-digit ID generation that auto-increments and naturally expands to 4 digits if exceeding 999.
+- Added Title slugification upon creation.
+- Added a transaction-safe file-write and atomic recovery pipeline for creating and PATCH-updating details briefs with .tmp writing and automatic self-healing on read.
+- Added UI details panel in the CenterPanel showing ID, Title, Description, Type, State, Phase, and Assignee, with warning banners for missing brief files.
+- Added popover "+" buttons and hover edit pencil icons in the sidebar.
+- Added Add/Update Feature, Discard Confirmation, and soft-drop confirmation modals to the sidebar workspace.
+- Added unit and integration tests covering the new SQLite migrations, CLI start-feature commands, API routes, and modal components.
+
 ## 0.5.0 — Project Management Amendment
 
 - Added Project Rename capabilities to modify the registered display name in the central database without altering local files.

@@ -56,7 +56,7 @@ export type Phase =
   | "spec"
   | "plan"
   | "tasks"
-  | "requirements-review"
+  | "spec-review"
   | "implement"
   | "review"
   | "integrate";
@@ -72,6 +72,8 @@ export type BlockedReason =
   | "ci-pending"
   | "failed";
 
+export type ClosedReason = "done" | "dropped" | "failed";
+
 export interface WorkItem {
   id: string;
   title: string;
@@ -81,10 +83,16 @@ export interface WorkItem {
   phase_group: PhaseGroup;
   work_item_type: WorkItemType;
   blocked_reason: BlockedReason | null;
+  closed_reason?: ClosedReason | null;
   assignee: string | null;
   project: string;
   branch: string | null;
   pr_url: string | null;
+  feature_brief_path?: string | null;
+  feature_brief_missing?: boolean;
+  spec_path?: string | null;
+  plan_path?: string | null;
+  tasks_path?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -112,6 +120,7 @@ export type AgentMessageEventType =
 
 export type LifecycleEventType =
   | "work_item.created"
+  | "work_item.updated"
   | "work_item.state_changed"
   | "human.decided"
   | "human.message"

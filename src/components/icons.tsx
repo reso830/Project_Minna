@@ -71,3 +71,12 @@ export function SendIcon() {
     </svg>
   );
 }
+
+export function PencilIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="14">
+      <path d="m12 20 8-8a2.8 2.8 0 0 0-4-4l-8 8-1 5Z" />
+      <path d="m14 10 4 4" />
+    </svg>
+  );
+}
