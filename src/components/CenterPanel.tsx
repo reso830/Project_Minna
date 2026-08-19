@@ -213,7 +213,11 @@ export function CenterPanel() {
         </div>
       </header>
 
-      {activeFeature.feature_brief_missing && <p className="feature-brief-warning">Warning: Feature brief not found. Click edit to recreate or attach a new brief.</p>}
+      {activeFeature.feature_brief_missing && (
+        <p className="feature-brief-warning" onMouseEnter={showDetails} onMouseLeave={scheduleDetailsClose}>
+          Warning: Feature brief not found. Click edit to recreate or attach a new brief.
+        </p>
+      )}
 
       {isDetailsVisible && (
         <section aria-label="Feature details" className="details-panel" onMouseEnter={showDetails} onMouseLeave={scheduleDetailsClose}>
