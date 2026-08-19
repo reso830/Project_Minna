@@ -147,24 +147,24 @@
 
 **Purpose**: Version increments, CHANGELOG edits, and documentation roadmap updates.
 
-- [ ] T011 Bump package version to 0.7.0 in package.json and package-lock.json
+- [x] T011 Bump package version to 0.7.0 in package.json and package-lock.json
   * **Target Files**:
     - [package.json](file:///D:/Alvin/_CodeProjects/Project_Minna/package.json)
     - `package-lock.json`
   * **Expected Behavior**: Update root version string to `0.7.0` in both `package.json` and `package-lock.json`.
   * **Validation/Test Location**: Run `npm run build:cli` to verify package compilation.
 
-- [ ] T012 Update CHANGELOG.md with Feature 004 details
+- [x] T012 Update CHANGELOG.md with Feature 004 details
   * **Target Files**: [CHANGELOG.md](file:///D:/Alvin/_CodeProjects/Project_Minna/CHANGELOG.md)
   * **Expected Behavior**: Add `[0.7.0]` entry documenting the expandable Details Panel, title bar redesign, assignee avatars, debounced hover, unpin hover-clearing, pre-transition scroll capture, and slug naming alignment.
   * **Validation/Test Location**: Manual markdown review.
 
-- [ ] T013 Update Feature Roadmap in docs/feature_roadmap.md
+- [x] T013 Update Feature Roadmap in docs/feature_roadmap.md
   * **Target Files**: [docs/feature_roadmap.md](file:///D:/Alvin/_CodeProjects/Project_Minna/docs/feature_roadmap.md)
   * **Expected Behavior**: Insert row for `004-details-panel`, release `0.7.0`, status `Completed`, and summary.
   * **Validation/Test Location**: Verify markdown table rendering.
 
-- [ ] T014 Update README.md and REPO_MAP.md
+- [x] T014 Update README.md and REPO_MAP.md
   * **Target Files**:
     - [README.md](file:///D:/Alvin/_CodeProjects/Project_Minna/README.md)
     - [docs/REPO_MAP.md](file:///D:/Alvin/_CodeProjects/Project_Minna/docs/REPO_MAP.md)

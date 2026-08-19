@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0 — Details Panel
+
+- Added an expandable Details panel to the Journal View title bar displaying read-only metadata (ID, Title, Type, Assignee, Description) for the active feature.
+- Added mouse-leave debounce (150ms) for temporary hover expansion and click-to-pin persistence with explicit hover clearing on unpin.
+- Added per-feature state isolation so feature switching resets hover and pinned states to closed.
+- Added continuous scroll tracking, pre-transition scroll capture, and layout reflow anchoring to keep the timeline positioned at the newest entry.
+- Redesigned the Journal title bar header with 54px height, assignee avatar tiles (`Minna_White.png` or 2-letter agent badges), 3-digit ID formatting, and feature slug titles.
+- Added `InfoIcon` and `PinIcon` SVG components in `src/components/icons.tsx`.
+- Aligned sidebar feature row rendering for consistent feature slug and 3-digit ID displays.
+
 ## 0.6.0 — Work Item Management
 
 - Added local project SQLite table schema migrations to support the work_items projection columns (closed_reason, feature_brief_path, spec_path, plan_path, tasks_path) and backfill the Events project column.

@@ -85,7 +85,7 @@ Use the Add Project interface in the local web application at `http://localhost:
 
 ## Scaffold Gaps
 
-This version handles work-item management, details brief file normalization, and soft-dropping. A few limitations remain as explicit follow-up work:
+This version handles work-item management, expandable feature details panel, title bar redesign with assignee avatar badges, details brief file normalization, and soft-dropping. A few limitations remain as explicit follow-up work:
 
 - **Work-Item Transition Legality**: While the soft-drop ("Drop Feature") transition is now validated, other general phase and state transitions in the state model are not yet structurally enforced at the database layer.
 - **Concurrent SQLite Writers**: Concurrent writers on the local project database (`minna.db`) are not yet fully optimized (e.g. WAL mode and busy timeouts are not configured on the project database connection). While immediate transactions prevent duplicate-ID races from corrupting data, concurrent CLI and web UI writes remain subject to temporary locking under higher write contention.

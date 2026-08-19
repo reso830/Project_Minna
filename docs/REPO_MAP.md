@@ -12,6 +12,8 @@ Project_Minna/
       v1.0.0-minna-foundations/
         001-journal-view.md
         002-project-creation.md
+        003-work-item-management.md
+        004-details-panel.md
     minna-project-registry.md
     REPO_MAP.md             # This file
     feature_roadmap.md      # Overall release roadmap tracker
@@ -41,6 +43,13 @@ Project_Minna/
       checklists/
         requirements.md
         plan-review.md
+    004-details-panel/
+      spec.md
+      plan.md
+      tasks.md
+      checklists/
+        requirements.md
+        plan-review.md
   src/
     adapters/               # Third-party integration adapters
       claude.ts             # Claude LLM boundary
@@ -64,14 +73,14 @@ Project_Minna/
     components/             # UI Components
       AddUpdateFeatureModal.tsx # Centered modal for creating and updating features
       AgentUsage.tsx        # Inline agent cost, quota, and runtime diagnostics bar
-      CenterPanel.tsx       # Middle workspace timeline displaying event logs, decisions, and replies
+      CenterPanel.tsx       # Middle workspace timeline with 54px header, expandable Details panel, decisions, and replies
       DiscardConfirmModal.tsx # Confirmation dialog for discarding dirty changes
       DropConfirmModal.tsx  # Confirmation dialog for soft-dropping a feature
       ErrorModal.tsx        # High-priority blocking dialog to render validation failures
       RightPanel.tsx        # Inspectable detail panel for active feature files and decisions
       Sidebar.tsx           # Navigation panel rendering projects, features, and operator details
       WorkspaceProvider.tsx # State provider managing selected projects, active features, and replies
-      icons.tsx             # Shared SVGs for UI navigation and controls
+      icons.tsx             # Shared SVGs for UI navigation and controls (including InfoIcon and PinIcon)
     core/                   # Core Domain Logic & Persistence
       repositories/         # Repository abstraction and data access layer
         factory.ts          # Repository instantiation factory helper

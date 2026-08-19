@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { WorkItem, WorkItemEvent } from "../core/types";
-import { SendIcon } from "./icons";
+import { InfoIcon, PinIcon, SendIcon } from "./icons";
 import { useWorkspace } from "./WorkspaceProvider";
 
 interface DecisionPrompt {
@@ -50,7 +51,35 @@ function actorLabel(actor: string): string {
 }
 
 function assigneeLabel(feature: WorkItem): string {
-  return feature.assignee ?? "unassigned";
+  return feature.assignee?.trim() || "Minna";
+}
+
+const agentAvatars: Record<string, { code: string; color: string }> = {
+  agy: { code: "A3", color: "#c0392b" },
+  claude: { code: "A1", color: "#e08a2e" },
+  codex: { code: "A2", color: "#4a544d" },
+};
+
+function AssigneeAvatar({ feature }: { feature: WorkItem }) {
+  const assignee = feature.assignee?.trim();
+  if (!assignee || assignee.toLowerCase() === "minna") {
+    return (
+      <div aria-label="Assignee: Minna" className="journal-assignee-avatar journal-assignee-avatar--minna" role="img">
+        <Image alt="" aria-hidden="true" height={26} src="/assets/Minna_White.png" width={26} />
+      </div>
+    );
+  }
+
+  const avatar = agentAvatars[assignee.toLowerCase()] ?? {
+    code: assignee.slice(0, 2).toUpperCase(),
+    color: "#4a544d",
+  };
+
+  return (
+    <span aria-label={`Assignee: ${assignee}`} className="journal-assignee-avatar journal-assignee-avatar--agent" role="img" style={{ backgroundColor: avatar.color }}>
+      {avatar.code}
+    </span>
+  );
 }
 
 export function CenterPanel() {
@@ -63,10 +92,72 @@ export function CenterPanel() {
     submitReply,
   } = useWorkspace();
   const [reply, setReply] = useState("");
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAtBottomRef = useRef(true);
   const previousTimeline = useRef({ featureId: null as string | null, length: 0 });
   const activeFeature = features.find((feature) => feature.id === activeFeatureId) ?? null;
   const timeline = activeFeature ? events[activeFeature.id] ?? [] : [];
+  const isDetailsVisible = isPinned || isHovered;
+
+  const captureScrollState = () => {
+    const timelineElement = timelineRef.current;
+    if (timelineElement) {
+      isAtBottomRef.current = timelineElement.scrollTop + timelineElement.clientHeight >= timelineElement.scrollHeight - 5;
+    }
+  };
+
+  const clearLeaveTimeout = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+  };
+
+  const showDetails = () => {
+    captureScrollState();
+    clearLeaveTimeout();
+    setIsHovered(true);
+  };
+
+  const scheduleDetailsClose = () => {
+    clearLeaveTimeout();
+    leaveTimeoutRef.current = setTimeout(() => {
+      captureScrollState();
+      setIsHovered(false);
+      leaveTimeoutRef.current = null;
+    }, 150);
+  };
+
+  const toggleDetailsPin = () => {
+    captureScrollState();
+    clearLeaveTimeout();
+    if (isPinned) {
+      setIsPinned(false);
+      setIsHovered(false);
+      return;
+    }
+
+    setIsPinned(true);
+  };
+
+  useEffect(() => () => clearLeaveTimeout(), []);
+
+  useEffect(() => {
+    captureScrollState();
+    clearLeaveTimeout();
+    setIsPinned(false);
+    setIsHovered(false);
+  }, [activeFeatureId]);
+
+  useLayoutEffect(() => {
+    const timelineElement = timelineRef.current;
+    if (timelineElement && isAtBottomRef.current) {
+      timelineElement.scrollTop = timelineElement.scrollHeight;
+    }
+  }, [isDetailsVisible]);
 
   useEffect(() => {
     const timelineElement = timelineRef.current;
@@ -100,6 +191,7 @@ export function CenterPanel() {
   return (
     <section aria-label="Journal thread" className="center-panel">
       <header className="journal-header">
+        <AssigneeAvatar feature={activeFeature} />
         <div className="journal-title">
           <span className="journal-feature-id">{featureNumber(activeFeature.id)}</span>
           <h1>{activeFeature.title}</h1>
@@ -107,23 +199,37 @@ export function CenterPanel() {
         <div className="journal-header-actions">
           <span className={`journal-status journal-status--${activeFeature.state}`}>{activeFeature.state}</span>
           <button className="journal-tasks-button" type="button">Tasks</button>
+          <button
+            aria-label="Show details"
+            aria-pressed={isPinned}
+            className={`journal-details-toggle${isDetailsVisible ? " journal-details-toggle--active" : ""}`}
+            onClick={toggleDetailsPin}
+            onMouseEnter={showDetails}
+            onMouseLeave={scheduleDetailsClose}
+            type="button"
+          >
+            {isDetailsVisible ? <PinIcon /> : <InfoIcon />}
+          </button>
         </div>
       </header>
 
-      <section aria-label="Feature details" className="feature-details">
-        <dl>
-          <div><dt>ID</dt><dd>{featureNumber(activeFeature.id)}</dd></div>
-          <div><dt>Title</dt><dd>{activeFeature.title}</dd></div>
-          <div><dt>Description</dt><dd>{activeFeature.description}</dd></div>
-          <div><dt>Type</dt><dd>{activeFeature.work_item_type}</dd></div>
-          <div><dt>State</dt><dd>{activeFeature.state}</dd></div>
-          <div><dt>Phase</dt><dd>{activeFeature.phase}</dd></div>
-          <div><dt>Assignee</dt><dd>{assigneeLabel(activeFeature)}</dd></div>
-        </dl>
-        {activeFeature.feature_brief_missing && <p className="feature-brief-warning">Warning: Feature brief not found. Click edit to recreate or attach a new brief.</p>}
-      </section>
+      {activeFeature.feature_brief_missing && <p className="feature-brief-warning">Warning: Feature brief not found. Click edit to recreate or attach a new brief.</p>}
 
-      <div aria-label="Journal timeline" className="journal-timeline" ref={timelineRef}>
+      {isDetailsVisible && (
+        <section aria-label="Feature details" className="details-panel" onMouseEnter={showDetails} onMouseLeave={scheduleDetailsClose}>
+          <div className="details-panel-row">
+            <div className="details-panel-col"><span className="details-panel-label">ID</span><span className="details-panel-value">{featureNumber(activeFeature.id)}</span></div>
+            <div className="details-panel-col"><span className="details-panel-label">Title</span><span className="details-panel-value">{activeFeature.title}</span></div>
+          </div>
+          <div className="details-panel-row">
+            <div className="details-panel-col"><span className="details-panel-label">Type</span><span className="details-panel-value">{activeFeature.work_item_type}</span></div>
+            <div className="details-panel-col"><span className="details-panel-label">Assignee</span><span className="details-panel-value">{assigneeLabel(activeFeature)}</span></div>
+          </div>
+          <div className="details-panel-col"><span className="details-panel-label">Description</span><span className="details-panel-value">{activeFeature.description}</span></div>
+        </section>
+      )}
+
+      <div aria-label="Journal timeline" className="journal-timeline" onScroll={captureScrollState} ref={timelineRef}>
         {timeline.length === 0 ? (
           <div className="journal-empty-state">
             <h2>No journal activity yet</h2>
