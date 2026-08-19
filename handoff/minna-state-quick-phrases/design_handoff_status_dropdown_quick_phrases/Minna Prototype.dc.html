@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+#quick-phrases-scroll::-webkit-scrollbar{display:none}
+#quick-phrases-scroll{scrollbar-width:none}
+body{margin:0;background:#dfe2e0;font-family:'IBM Plex Sans',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+a{color:#00c9d6}a:hover{color:#00F0FF}
+</style>
+</helmet>
+
+<div style="width:1400px;height:880px;display:flex;background:#f3f5f4;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.18);overflow:hidden;font-family:'IBM Plex Sans',sans-serif;position:relative">
+
+  <div style="width:280px;flex:none;border-right:1px solid #dbe0dd;padding:20px 16px;display:flex;flex-direction:column;gap:16px;background:#eceff0;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px">
+      <img src="assets/minna-mark.png" style="width:44px;height:44px;flex:none;object-fit:contain;margin:-8px 0">
+      <div style="font:700 17px 'JetBrains Mono',monospace;color:#0f1512;letter-spacing:-.3px">minna</div>
+      <sc-if value="{{ isNonEmptyView }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ toggleView }}" style="margin-left:auto;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7c8983" style-hover="background:#7c8983;color:#eceff0">
+        <sc-if value="{{ isJournalView }}" hint-placeholder-val="{{ true }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+        </sc-if>
+        <sc-if value="{{ isBoardView }}" hint-placeholder-val="{{ false }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </sc-if>
+        <sc-if value="{{ isEmptyView }}" hint-placeholder-val="{{ false }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+        </sc-if>
+      </div>
+      </sc-if>
+      <div onClick="{{ toggleEmptyPreview }}" title="Preview blank state" style="{{ emptyToggleWrapStyle }}" style-hover="background:#7c8983;color:#eceff0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+      </div>
+      <div onClick="{{ noop }}" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7c8983" style-hover="background:#7c8983;color:#eceff0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center">
+      <div style="font:700 11px 'JetBrains Mono';color:#7c8983;letter-spacing:1.2px">PROJECTS</div>
+      <div onClick="{{ noop }}" style="margin-left:auto;width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#00c9d6;font:600 15px 'IBM Plex Sans';cursor:pointer" style-hover="background:#00c9d6;color:#eceff0">+</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px;flex:1;overflow-y:auto;min-height:0;scrollbar-gutter:stable;padding-right:8px;margin-right:-8px;box-sizing:content-box">
+      <sc-if value="{{ isEmptyView }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px 8px;color:#8f9a94">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b7bdba" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <div style="font:400 12px 'IBM Plex Mono';line-height:1.5">No projects yet.<br/>Add one to see it here.</div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ isNonEmptyView }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ isProjectVisible_checkout }}" hint-placeholder-val="{{ true }}">
+      <div onMouseEnter="{{ hoverProject_checkout }}" onMouseLeave="{{ unhoverProject }}" onClick="{{ selectCheckoutProject }}" style="{{ checkoutHeaderStyle }}">
+        <sc-if value="{{ isJournalView }}" hint-placeholder-val="{{ true }}"><span style="font-size:16px;width:18px;display:inline-block">{{ projectChevron }}</span></sc-if>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ projectName_checkout }}</span>
+        <div style="position:relative;display:flex;align-items:center;gap:2px">
+          <div onClick="{{ toggleMenu_checkout }}" style="{{ addIconStyle_checkout }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </div>
+          <div onClick="{{ addFeatureToggle_checkout }}" style="{{ addIconStyle_checkout }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <sc-if value="{{ isAddFeatureMenuOpen_checkout }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ openAddFeature_checkout }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512;white-space:nowrap" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Feature
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isMenuOpen_checkout }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ editProject_checkout }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Edit Project
+            </div>
+            <div onClick="{{ removeProject_checkout }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#a13030" style-hover="background:#fbeaea">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              Remove Project
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ showCheckoutFeatures }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-left:20px;display:flex;flex-direction:column;gap:2px;margin-top:2px">
+        <sc-for list="{{ checkoutFeatureRows }}" as="feat" hint-placeholder-count="3">
+        <div onClick="{{ feat.onClick }}" onMouseEnter="{{ feat.onMouseEnter }}" onMouseLeave="{{ feat.onMouseLeave }}" style="{{ feat.style }}">
+          <div style="width:6px;height:6px;border-radius:50%;background:{{ feat.dotColor }};flex:none"></div>
+          <span style="color:#8f9a94;flex:none">{{ feat.displayId }}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ feat.slug }}</span>
+          <div onClick="{{ feat.onEllipsisClick }}" style="{{ feat.iconStyle }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+      </sc-if>
+      </sc-if>
+      <sc-if value="{{ isProjectVisible_search }}" hint-placeholder-val="{{ true }}">
+      <div onMouseEnter="{{ hoverProject_search }}" onMouseLeave="{{ unhoverProject }}" onClick="{{ selectSearchProject }}" style="{{ searchHeaderStyle }}">
+        <sc-if value="{{ isJournalView }}" hint-placeholder-val="{{ true }}"><span style="font-size:16px;width:18px;display:inline-block">{{ searchProjectChevron }}</span></sc-if>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ projectName_search }}</span>
+        <div style="position:relative;display:flex;align-items:center;gap:2px">
+          <div onClick="{{ toggleMenu_search }}" style="{{ addIconStyle_search }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </div>
+          <div onClick="{{ addFeatureToggle_search }}" style="{{ addIconStyle_search }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <sc-if value="{{ isAddFeatureMenuOpen_search }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ openAddFeature_search }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512;white-space:nowrap" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Feature
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isMenuOpen_search }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ editProject_search }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Edit Project
+            </div>
+            <div onClick="{{ removeProject_search }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#a13030" style-hover="background:#fbeaea">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              Remove Project
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ showSearchFeatures }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-left:20px;display:flex;flex-direction:column;gap:2px;margin-top:2px">
+        <sc-for list="{{ searchFeatureRows }}" as="feat" hint-placeholder-count="2">
+        <div onClick="{{ feat.onClick }}" onMouseEnter="{{ feat.onMouseEnter }}" onMouseLeave="{{ feat.onMouseLeave }}" style="{{ feat.style }}">
+          <div style="width:6px;height:6px;border-radius:50%;background:{{ feat.dotColor }};flex:none"></div>
+          <span style="color:#8f9a94;flex:none">{{ feat.displayId }}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ feat.slug }}</span>
+          <div onClick="{{ feat.onEllipsisClick }}" style="{{ feat.iconStyle }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+      </sc-if>
+      </sc-if>
+      <sc-if value="{{ isProjectVisible_billing }}" hint-placeholder-val="{{ true }}">
+      <div onMouseEnter="{{ hoverProject_billing }}" onMouseLeave="{{ unhoverProject }}" onClick="{{ selectBillingProject }}" style="{{ billingHeaderStyle }}">
+        <sc-if value="{{ isJournalView }}" hint-placeholder-val="{{ true }}"><span style="font-size:16px;width:18px;display:inline-block">{{ billingProjectChevron }}</span></sc-if>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ projectName_billing }}</span>
+        <div style="position:relative;display:flex;align-items:center;gap:2px">
+          <div onClick="{{ toggleMenu_billing }}" style="{{ addIconStyle_billing }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </div>
+          <div onClick="{{ addFeatureToggle_billing }}" style="{{ addIconStyle_billing }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <sc-if value="{{ isAddFeatureMenuOpen_billing }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ openAddFeature_billing }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512;white-space:nowrap" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Feature
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isMenuOpen_billing }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ editProject_billing }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Edit Project
+            </div>
+            <div onClick="{{ removeProject_billing }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#a13030" style-hover="background:#fbeaea">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              Remove Project
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ showBillingFeatures }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-left:20px;display:flex;flex-direction:column;gap:2px;margin-top:2px">
+        <sc-for list="{{ billingFeatureRows }}" as="feat" hint-placeholder-count="2">
+        <div onClick="{{ feat.onClick }}" onMouseEnter="{{ feat.onMouseEnter }}" onMouseLeave="{{ feat.onMouseLeave }}" style="{{ feat.style }}">
+          <div style="width:6px;height:6px;border-radius:50%;background:{{ feat.dotColor }};flex:none"></div>
+          <span style="color:#8f9a94;flex:none">{{ feat.displayId }}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ feat.slug }}</span>
+          <div onClick="{{ feat.onEllipsisClick }}" style="{{ feat.iconStyle }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+      </sc-if>
+      </sc-if>
+      <sc-if value="{{ isProjectVisible_third }}" hint-placeholder-val="{{ true }}">
+      <div onMouseEnter="{{ hoverProject_third }}" onMouseLeave="{{ unhoverProject }}" onClick="{{ selectThirdProject }}" style="{{ thirdHeaderStyle }}">
+        <sc-if value="{{ isJournalView }}" hint-placeholder-val="{{ true }}"><span style="font-size:16px;width:18px;display:inline-block">{{ thirdProjectChevron }}</span></sc-if>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ projectName_third }}</span>
+        <div style="position:relative;display:flex;align-items:center;gap:2px">
+          <div onClick="{{ toggleMenu_third }}" style="{{ addIconStyle_third }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </div>
+          <div onClick="{{ addFeatureToggle_third }}" style="{{ addIconStyle_third }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <sc-if value="{{ isAddFeatureMenuOpen_third }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ openAddFeature_third }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512;white-space:nowrap" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Feature
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isMenuOpen_third }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stopProp }}" style="{{ popoverFixedStyle }}">
+            <div onClick="{{ editProject_third }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#0f1512" style-hover="background:#eceff0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Edit Project
+            </div>
+            <div onClick="{{ removeProject_third }}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:4px;font:500 12px 'IBM Plex Sans';cursor:pointer;color:#a13030" style-hover="background:#fbeaea">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              Remove Project
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ showThirdFeatures }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-left:20px;display:flex;flex-direction:column;gap:2px;margin-top:2px">
+        <sc-for list="{{ thirdFeatureRows }}" as="feat" hint-placeholder-count="1">
+        <div onClick="{{ feat.onClick }}" onMouseEnter="{{ feat.onMouseEnter }}" onMouseLeave="{{ feat.onMouseLeave }}" style="{{ feat.style }}">
+          <div style="width:6px;height:6px;border-radius:50%;background:{{ feat.dotColor }};flex:none"></div>
+          <span style="color:#8f9a94;flex:none">{{ feat.displayId }}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ feat.slug }}</span>
+          <div onClick="{{ feat.onEllipsisClick }}" style="{{ feat.iconStyle }}" style-hover="background:rgba(0,0,0,.08)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="M15 5l4 4"></path></svg>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+      </sc-if>
+      </sc-if>
+      </sc-if>
+    </div>
+    <div style="flex:none;border-top:1px solid #dbe0dd;margin:0 -16px"></div>
+    <div style="flex:none;width:100%;aspect-ratio:1;border:1px dashed #b7bdba;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#7c8983;font:400 12px 'JetBrains Mono';text-align:center">avatar<br/>(dynamic)</div>
+    <div style="flex:none;padding-top:0;display:flex;flex-direction:column;gap:10px">
+      <div onClick="{{ toggleUsage }}" style="display:flex;align-items:center;gap:6px;font:500 12px 'JetBrains Mono';color:#4a544d;cursor:pointer;user-select:none"><span style="font-size:10px">{{ usageChevron }}</span>AGENT USAGE</div>
+      <sc-if value="{{ showEmptyUsage }}" hint-placeholder-val="{{ false }}">
+      <div style="font:400 12px 'IBM Plex Mono';color:#8f9a94">No agents configured yet</div>
+      </sc-if>
+      <sc-if value="{{ showRealUsage }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:9px;max-height:69px;overflow-y:auto;scrollbar-gutter:stable;padding-right:8px;box-sizing:content-box">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:20px;height:20px;background:#e08a2e;flex:none"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:10px 'JetBrains Mono';color:#8f9a94;width:20px">5h</span><div style="flex:1;height:4px;background:#dfe6e2;overflow:hidden"><div style="width:40%;height:100%;background:#00c9d6"></div></div></div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:10px 'JetBrains Mono';color:#8f9a94;width:20px">7d</span><div style="flex:1;height:4px;background:#dfe6e2;overflow:hidden"><div style="width:72%;height:100%;background:#00c9d6"></div></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:20px;height:20px;background:#4a544d;flex:none"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:10px 'JetBrains Mono';color:#8f9a94;width:20px">5h</span><div style="flex:1;height:4px;background:#dfe6e2;overflow:hidden"><div style="width:15%;height:100%;background:#00c9d6"></div></div></div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:10px 'JetBrains Mono';color:#8f9a94;width:20px">7d</span><div style="flex:1;height:4px;background:#dfe6e2;overflow:hidden"><div style="width:48%;height:100%;background:#00c9d6"></div></div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:20px;height:20px;background:#c0392b;flex:none"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:10px 'JetBrains Mono';color:#8f9a94;width:20px">5h</span><div style="flex:1;height:4px;background:#dfe6e2;overflow:hidden"><div style="width:5%;height:100%;background:#00c9d6"></div></div></div>
+            <div style="display:flex;align-items:center;gap:6px"><span style="font:10px 'JetBrains Mono';color:#8f9a94;width:20px">7d</span><div style="flex:1;height:4px;background:#dfe6e2;overflow:hidden"><div style="width:30%;height:100%;background:#00c9d6"></div></div></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{ isEmptyView }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;min-width:0;padding:40px">
+    <img src="assets/minna-mark.png" style="width:96px;height:96px;object-fit:contain;opacity:.85">
+    <div style="text-align:center;display:flex;flex-direction:column;gap:8px">
+      <div style="font:600 22px 'JetBrains Mono';color:#0f1512">Nothing running yet</div>
+      <div style="font:400 14px 'IBM Plex Sans';color:#7c8983;max-width:420px;line-height:1.5">Describe what you want built. Minna will spin up agents, keep a journal of decisions, and check in when it needs you.</div>
+    </div>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isJournalView }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid #dbe0dd;position:relative">
+    <div style="height:54px;box-sizing:border-box;padding:0 24px;border-bottom:2px solid #dbe0dd;display:flex;align-items:center;gap:12px">
+      <div style="width:32px;height:32px;border-radius:6px;flex:none;overflow:hidden">
+        <sc-if value="{{ isAssigneeMinna }}" hint-placeholder-val="{{ false }}">
+        <div style="width:100%;height:100%;background:#00c9d6;display:flex;align-items:center;justify-content:center">
+          <img src="assets/minna-white-icon.png" style="width:26px;height:26px;object-fit:contain" />
+        </div>
+        </sc-if>
+        <sc-if value="{{ isAssigneeAgent }}" hint-placeholder-val="{{ true }}">
+        <div style="width:100%;height:100%;background:{{ assigneeAgentColor }};display:flex;align-items:center;justify-content:center;color:#fff;font:700 11px 'JetBrains Mono'">{{ assigneeAgentCode }}</div>
+        </sc-if>
+      </div>
+      <div style="font:600 17px 'JetBrains Mono';color:#0f1512"><span style="color:#8f9a94;font:14px 'JetBrains Mono';margin-right:8px">{{ selectedId }}</span>{{ selectedSlug }}</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <div style="position:relative" onMouseEnter="{{ onStatusChipEnter }}" onMouseLeave="{{ onStatusChipLeave }}">
+          <div style="{{ selectedStatusStyle }}cursor:default;">{{ selectedStatusLabel }}</div>
+          <sc-if value="{{ showStatusMenu }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:100%;left:0;padding-top:6px;z-index:30">
+            <div style="background:#fff;border:1px solid #dbe0dd;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.14);min-width:110px;padding:4px;display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ statusActions }}" as="action" hint-placeholder-count="2">
+              <div onClick="{{ action.onClick }}" style="padding:8px 10px;border-radius:4px;font:500 12px 'JetBrains Mono';color:#0f1512;cursor:pointer;white-space:nowrap" style-hover="background:#f3f5f4">{{ action.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+        <div style="border:1px solid #dbe0dd;color:#4a544d;padding:5px 14px;border-radius:4px;font:700 12px 'JetBrains Mono'">TASKS</div>
+        <div onMouseEnter="{{ onDetailsIconEnter }}" onMouseLeave="{{ onDetailsIconLeave }}" onClick="{{ toggleDetailsPin }}" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7c8983" style-hover="background:#7c8983;color:#eceff0">
+          <sc-if value="{{ isDetailsPanelVisible }}" hint-placeholder-val="{{ false }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path></svg>
+          </sc-if>
+          <sc-if value="{{ isDetailsPanelHidden }}" hint-placeholder-val="{{ true }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ isDetailsPanelVisible }}" hint-placeholder-val="{{ false }}">
+    <div onMouseEnter="{{ onDetailsPanelEnter }}" onMouseLeave="{{ onDetailsPanelLeave }}" style="flex:none;background:#fff;border-bottom:1px solid #dbe0dd;padding:18px 24px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:32px">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+          <div style="font:600 11px 'JetBrains Mono';color:#8f9a94;letter-spacing:.8px">ID</div>
+          <div style="font:400 13px 'IBM Plex Sans';color:#0f1512">{{ selectedId }}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+          <div style="font:600 11px 'JetBrains Mono';color:#8f9a94;letter-spacing:.8px">TITLE</div>
+          <div style="font:400 13px 'IBM Plex Sans';color:#0f1512">{{ detailsTitle }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:32px">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+          <div style="font:600 11px 'JetBrains Mono';color:#8f9a94;letter-spacing:.8px">TYPE</div>
+          <div style="font:400 13px 'IBM Plex Sans';color:#0f1512">{{ detailsType }}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+          <div style="font:600 11px 'JetBrains Mono';color:#8f9a94;letter-spacing:.8px">ASSIGNEE</div>
+          <div style="font:400 13px 'IBM Plex Sans';color:#0f1512">{{ detailsAssigneeLabel }}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="font:600 11px 'JetBrains Mono';color:#8f9a94;letter-spacing:.8px">DESCRIPTION</div>
+        <div style="font:400 13px 'IBM Plex Sans';color:#0f1512;line-height:1.5">{{ detailsDescription }}</div>
+      </div>
+    </div>
+    </sc-if>
+    <div ref="{{ threadRef }}" style="flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:18px;overflow:auto">
+      <sc-for list="{{ threadMessages }}" as="msg" hint-placeholder-count="3">
+      <div style="display:flex;gap:12px;flex-direction:{{ msg.direction }}">
+        <div style="width:32px;height:32px;background:{{ msg.avatarBg }};flex:none;display:flex;align-items:center;justify-content:center;color:{{ msg.avatarColor }};font:700 12px 'JetBrains Mono'">{{ msg.initials }}</div>
+        <div style="max-width:74%;display:flex;flex-direction:column;gap:10px">
+          <div style="font:500 12px 'JetBrains Mono';color:#8f9a94;margin-bottom:-6px;text-align:{{ msg.textAlign }}">{{ msg.sender }} <span style="color:#b5bdb9">· {{ msg.time }}</span></div>
+          <div style="background:{{ msg.bubbleBg }};border:{{ msg.bubbleBorder }};border-radius:4px;padding:14px 16px;font:400 13px 'IBM Plex Sans';color:#101614;line-height:1.5">
+            {{ msg.text }}
+            <sc-if value="{{ msg.isPendingDecision }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                <div onClick="{{ answerOutsideClick }}" style="border:1px solid #00c9d6;border-radius:4px;padding:7px 14px;background:#fff;font:500 13px 'JetBrains Mono';color:#00c9d6;cursor:pointer" style-hover="background:#00F0FF;color:#101614">close_on_outside_click</div>
+                <div onClick="{{ answerXButton }}" style="border:1px solid #00c9d6;border-radius:4px;padding:7px 14px;background:#fff;font:500 13px 'JetBrains Mono';color:#00c9d6;cursor:pointer" style-hover="background:#00F0FF;color:#101614">x_button_only</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ msg.isResolvedDecision }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;border:1px solid #00c9d6;border-radius:4px;padding:7px 14px;font:500 13px 'JetBrains Mono';color:#00c9d6">✓ {{ questionAnswer }}</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ hasQuickPhrases }}" hint-placeholder-val="{{ true }}">
+    <div style="border-top:1px solid #dbe0dd;padding:10px 24px 10px;display:flex;align-items:center;gap:6px">
+      <sc-if value="{{ showQuickLeftChevron }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7c8983;background:#fff;border:1px solid #dbe0dd" onClick="{{ scrollQuickLeft }}" style-hover="background:#f3f5f4">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </div>
+      </sc-if>
+      <div id="quick-phrases-scroll" ref="{{ quickPhrasesRef }}" onScroll="{{ checkQuickScroll }}" style="flex:1;display:flex;gap:8px;overflow-x:auto;min-width:0">
+        <sc-for list="{{ quickPhrases }}" as="phrase" hint-placeholder-count="2">
+        <div onClick="{{ phrase.onClick }}" style="flex:none;white-space:nowrap;border:1px solid #dbe0dd;border-radius:6px;padding:7px 12px;font:500 12px 'JetBrains Mono';color:#4a544d;background:#fff;cursor:pointer" style-hover="background:#00F0FF;color:#101614;border-color:#00F0FF">{{ phrase.label }}</div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ showQuickRightChevron }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#7c8983;background:#fff;border:1px solid #dbe0dd" onClick="{{ scrollQuickRight }}" style-hover="background:#f3f5f4">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+    <div style="{{ composeBarStyle }}">
+      <textarea value="{{ replyText }}" onChange="{{ onReplyChange }}" onKeyDown="{{ onReplyKeyDown }}" placeholder="Send reply" rows="2" style="flex:1;border:1px solid #dbe0dd;border-radius:4px;padding:11px 18px;font:400 14px 'JetBrains Mono';color:#101614;background:#fff;outline:none;resize:none;line-height:1.5"></textarea>
+      <div onClick="{{ sendReply }}" style="width:56px;height:56px;background:#00c9d6;border-radius:4px;flex:none;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#00F0FF">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#101614" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </div>
+    </div>
+    <div style="padding:0 24px 12px;font:400 11px 'JetBrains Mono';color:#8f9a94;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ gitInfo }}</div>
+  </div>
+
+  <div style="width:490px;flex:none;display:flex;flex-direction:column;background:#0c110f">
+    <div style="height:54px;box-sizing:border-box;display:flex;align-items:stretch;background:#eceff0;border-bottom:2px solid #dbe0dd">
+      <div onClick="{{ selectTerminalTab }}" style="{{ terminalTabStyle }}">AGENTS</div>
+      <div onClick="{{ selectMdTab }}" style="{{ mdTabStyle }}" style-hover="background:#101614;color:#00F0FF">DOCS</div>
+      <div onClick="{{ selectDiffTab }}" style="{{ diffTabStyle }}" style-hover="background:#101614;color:#00F0FF">DIFF</div>
+    </div>
+
+    <sc-if value="{{ isTerminalTab }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;overflow-y:auto;max-height:100%">
+      <div style="{{ agent1PaneStyle }}border-bottom:1px solid #1c2622;">
+        <div onClick="{{ toggleAgent1 }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;flex:none;cursor:pointer;user-select:none">
+          <span style="color:#6d766f;font-size:10px">{{ agent1Chevron }}</span>
+          <span style="color:#e08a2e;font:500 13px 'JetBrains Mono'">agent-1 · working</span>
+        </div>
+        <sc-if value="{{ agent1Expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;padding:0 16px 12px 38px;display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0">
+          <div style="color:#00F0FF;font:400 13px 'JetBrains Mono'">$ writing CartDrawer.tsx</div>
+          <div style="color:#c6ccc9;font:400 13px 'JetBrains Mono'">+ 42 lines</div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="{{ agent2PaneStyle }}border-bottom:1px solid #1c2622;">
+        <div onClick="{{ toggleAgent2 }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;flex:none;cursor:pointer;user-select:none">
+          <span style="color:#6d766f;font-size:10px">{{ agent2Chevron }}</span>
+          <span style="color:#8f9a94;font:500 13px 'JetBrains Mono'">agent-2 · idle</span>
+        </div>
+        <sc-if value="{{ agent2Expanded }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;padding:0 16px 12px 38px;overflow:auto;min-height:0">
+          <div style="color:#6d766f;font:400 13px 'JetBrains Mono'">waiting for agent-1...</div>
+        </div>
+        </sc-if>
+      </div>
+      <div style="{{ agent3PaneStyle }}">
+        <div onClick="{{ toggleAgent3 }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;flex:none;cursor:pointer;user-select:none">
+          <span style="color:#6d766f;font-size:10px">{{ agent3Chevron }}</span>
+          <span style="color:#8f9a94;font:500 13px 'JetBrains Mono'">agent-3 · idle</span>
+        </div>
+        <sc-if value="{{ agent3Expanded }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;padding:0 16px 12px 38px;overflow:auto;min-height:0">
+          <div style="color:#6d766f;font:400 13px 'JetBrains Mono'">not yet assigned</div>
+        </div>
+        </sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isMdTab }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;padding:20px 24px;overflow:auto;background:#0c110f">
+      <div style="color:#00F0FF;font:700 15px 'JetBrains Mono';margin-bottom:10px">plan.md</div>
+      <div style="color:#c6ccc9;font:400 13px 'IBM Plex Mono';line-height:1.7">
+        # Cart Drawer Refactor<br/><br/>
+        - Replace legacy modal with a slide-in drawer component<br/>
+        - Preserve existing add/remove cart item handlers<br/>
+        - Decide: close on outside click vs X button only<br/>
+        - Add unit tests for open/close transitions<br/>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isDiffTab }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;padding:20px 24px;overflow:auto;background:#0c110f">
+      <div style="color:#8f9a94;font:500 13px 'JetBrains Mono';margin-bottom:10px">CartDrawer.tsx</div>
+      <div style="font:400 13px 'IBM Plex Mono';line-height:1.7">
+        <div style="color:#6d766f">@@ -1,4 +1,12 @@</div>
+        <div style="color:#7cf28c">+ import { useState } from 'react';</div>
+        <div style="color:#7cf28c">+ export function CartDrawer({ open, onClose }) {</div>
+        <div style="color:#c6ccc9">&nbsp;&nbsp;const [items, setItems] = useState([]);</div>
+        <div style="color:#e07a7a">- return null;</div>
+        <div style="color:#7cf28c">+ return open ? &lt;aside&gt;...&lt;/aside&gt; : null;</div>
+        <div style="color:#7cf28c">+ }</div>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isBoardView }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="height:54px;box-sizing:border-box;padding:0 24px;border-bottom:2px solid #dbe0dd;display:flex;align-items:center;gap:12px">
+      <div style="font:600 17px 'JetBrains Mono';color:#0f1512">Kanban Board: {{ boardProjectName }}</div>
+      <div onClick="{{ noop }}" style="margin-left:auto;background:#00F0FF;color:#101614;padding:7px 16px;border-radius:4px;font:700 12px 'JetBrains Mono';cursor:pointer" style-hover="background:#00c9d6">+ Add Feature</div>
+    </div>
+    <div style="flex:1;display:flex;padding:20px 24px;overflow:auto">
+      <sc-for list="{{ boardColumns }}" as="col" hint-placeholder-count="3">
+      <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px;padding:0 16px;border-right:1px solid #dbe0dd">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:{{ col.color }};flex:none"></div>
+          <div style="font:700 12px 'JetBrains Mono';color:#4a544d;letter-spacing:1px">{{ col.label }}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ col.items }}" as="card" hint-placeholder-count="1">
+          <div onClick="{{ card.openJournal }}" style="background:#fff;border:1px solid #dbe0dd;border-radius:6px;padding:10px 12px;cursor:pointer" style-hover="border-color:#00c9d6">
+            <div style="font:400 11px 'IBM Plex Mono';color:#8f9a94;margin-bottom:4px">{{ card.displayId }}</div>
+            <div style="font:400 13px 'IBM Plex Sans';color:#101614;margin-bottom:8px">{{ card.slug }}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div style="border:1px solid #b7bdba;border-radius:4px;padding:3px 8px;font:500 10px 'JetBrains Mono';color:#4a544d">{{ card.phase }}</div>
+              <sc-if value="{{ card.hasBlocker }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#7a1f30;color:#fff;border-radius:4px;padding:3px 8px;font:500 10px 'JetBrains Mono'">{{ card.blockerReason }}</div>
+              </sc-if>
+            </div>
+          </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-for>
+
+      <sc-if value="{{ closedCollapsed }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ toggleClosedColumn }}" style="width:28px;flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 6px;cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a544d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <div style="writing-mode:vertical-rl;transform:rotate(180deg);font:700 12px 'JetBrains Mono';color:#4a544d;letter-spacing:1px;display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:#2f9e44;flex:none"></div>CLOSED
+        </div>
+      </div>
+      </sc-if>
+      <sc-if value="{{ closedExpanded }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:10px;padding:0 16px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:#2f9e44;flex:none"></div>
+          <div style="font:700 12px 'JetBrains Mono';color:#4a544d;letter-spacing:1px;flex:1">CLOSED</div>
+          <div onClick="{{ toggleClosedColumn }}" style="cursor:pointer;display:flex;align-items:center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a544d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ closedItems }}" as="card" hint-placeholder-count="1">
+          <div onClick="{{ card.openJournal }}" style="background:#fff;border:1px solid #dbe0dd;border-radius:6px;padding:10px 12px;cursor:pointer" style-hover="border-color:#00c9d6">
+            <div style="font:400 11px 'IBM Plex Mono';color:#8f9a94;margin-bottom:4px">{{ card.displayId }}</div>
+            <div style="font:400 13px 'IBM Plex Sans';color:#101614;margin-bottom:8px">{{ card.slug }}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div style="border:1px solid #b7bdba;border-radius:4px;padding:3px 8px;font:500 10px 'JetBrains Mono';color:#4a544d">{{ card.phase }}</div>
+              <sc-if value="{{ card.hasBlocker }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#7a1f30;color:#fff;border-radius:4px;padding:3px 8px;font:500 10px 'JetBrains Mono'">{{ card.blockerReason }}</div>
+              </sc-if>
+            </div>
+          </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ isAnyMenuOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeProjectMenu }}" style="position:absolute;inset:0;z-index:25"></div>
+  </sc-if>
+
+  <input type="file" webkitdirectory="" directory="" multiple="" ref="{{ folderInputRef }}" onChange="{{ onFolderPicked }}" style="display:none" />
+  <input type="file" ref="{{ addFeatureFileRef }}" onChange="{{ onAddFeatureFilePicked }}" style="display:none" />
+
+  <sc-if value="{{ showEditModal }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,21,18,.55);z-index:90;display:flex;align-items:center;justify-content:center">
+    <div style="width:460px;background:#ffffff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px;display:flex;flex-direction:column;gap:20px">
+      <div style="font:600 17px 'IBM Plex Sans';color:#0f1512">Edit Project</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font:600 11px 'JetBrains Mono';color:#7c8983;letter-spacing:.8px">RENAME PROJECT</label>
+        <input value="{{ editDraftName }}" onChange="{{ updateEditName }}" style="padding:9px 10px;border-radius:6px;border:1px solid #dbe0dd;font:400 13px 'IBM Plex Sans';color:#0f1512;outline:none" />
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font:600 11px 'JetBrains Mono';color:#7c8983;letter-spacing:.8px">RELOCATE PROJECT</label>
+        <div style="font:400 12px 'IBM Plex Mono';color:#4a544d;background:#f3f5f4;border-radius:6px;padding:8px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ editDraftFolder }}</div>
+        <div onClick="{{ pickFolder }}" style="align-self:flex-start;padding:8px 14px;border-radius:6px;border:1px solid #dbe0dd;font:500 12px 'IBM Plex Sans';color:#0f1512;cursor:pointer" style-hover="background:#f3f5f4">Select project directory</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <div onClick="{{ removeFromEditModal }}" style="padding:9px 16px;border-radius:6px;background:#a13030;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#8a2828">Remove Project</div>
+        <div style="display:flex;gap:8px">
+          <div onClick="{{ cancelEdit }}" style="padding:9px 16px;border-radius:6px;border:1px solid #dbe0dd;font:500 13px 'IBM Plex Sans';color:#0f1512;cursor:pointer" style-hover="background:#f3f5f4">Cancel</div>
+          <div onClick="{{ saveEdit }}" style="{{ saveButtonStyle }}">Save</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showRemoveConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,21,18,.55);z-index:100;display:flex;align-items:center;justify-content:center">
+    <div style="width:400px;background:#ffffff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px;display:flex;flex-direction:column;gap:16px">
+      <div style="font:600 16px 'IBM Plex Sans';color:#0f1512">Remove "{{ removeConfirmProjectName }}"?</div>
+      <div style="font:400 13px 'IBM Plex Sans';color:#4a544d;line-height:1.5">This removes the project and its journal entries. This can't be undone.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <div onClick="{{ cancelRemoveConfirm }}" style="padding:9px 16px;border-radius:6px;border:1px solid #dbe0dd;font:500 13px 'IBM Plex Sans';color:#0f1512;cursor:pointer" style-hover="background:#f3f5f4">Cancel</div>
+        <div onClick="{{ confirmRemoveConfirm }}" style="padding:9px 16px;border-radius:6px;background:#a13030;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#8a2828">Remove Project</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showDiscardConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,21,18,.55);z-index:110;display:flex;align-items:center;justify-content:center">
+    <div style="width:380px;background:#ffffff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px;display:flex;flex-direction:column;gap:16px">
+      <div style="font:600 16px 'IBM Plex Sans';color:#0f1512">Discard changes?</div>
+      <div style="font:400 13px 'IBM Plex Sans';color:#4a544d;line-height:1.5">You have unsaved changes to this project. Discard them?</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <div onClick="{{ keepEditing }}" style="padding:9px 16px;border-radius:6px;border:1px solid #dbe0dd;font:500 13px 'IBM Plex Sans';color:#0f1512;cursor:pointer" style-hover="background:#f3f5f4">Keep Editing</div>
+        <div onClick="{{ confirmDiscard }}" style="padding:9px 16px;border-radius:6px;background:#a13030;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#8a2828">Discard</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showAddFeatureModal }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,21,18,.65);z-index:120;display:flex;align-items:center;justify-content:center">
+    <div style="width:520px;max-height:86vh;background:#ffffff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:28px;display:flex;flex-direction:column;gap:20px;overflow:auto">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div style="font:600 18px 'IBM Plex Sans';color:#0f1512">{{ addFeatureModalTitle }}</div>
+        <div style="font:400 12px 'IBM Plex Mono';color:#8f9a94">{{ addFeatureProjectName }}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font:600 11px 'JetBrains Mono';color:#7c8983;letter-spacing:.8px">FEATURE NUMBER</label>
+        <div style="padding:9px 10px;border-radius:6px;background:#f3f5f4;border:1px solid #dbe0dd;font:500 13px 'JetBrains Mono';color:#4a544d;width:fit-content;min-width:64px">{{ addFeatureNumberDisplay }}</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font:600 11px 'JetBrains Mono';color:#7c8983;letter-spacing:.8px">FEATURE TITLE</label>
+        <div style="font:400 12px 'IBM Plex Sans';color:#8f9a94;margin-top:-4px">{{ featureTitleSubheader }}</div>
+        <input value="{{ addFeatureTitle }}" onChange="{{ updateAddFeatureTitle }}" maxLength="50" disabled="{{ isUpdateFeatureMode }}" placeholder="e.g. Refund flow redesign" style="{{ featureTitleInputStyle }}" />
+        <div style="font:400 11px 'JetBrains Mono';color:#b7bdba;text-align:right">{{ addFeatureTitleCount }}/50</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font:600 11px 'JetBrains Mono';color:#7c8983;letter-spacing:.8px">FEATURE DESCRIPTION</label>
+        <div style="font:400 12px 'IBM Plex Sans';color:#8f9a94;margin-top:-4px">Brief description of this feature.</div>
+        <input value="{{ addFeatureDescription }}" onChange="{{ updateAddFeatureDescription }}" maxLength="100" placeholder="e.g. Lets users retry failed payments automatically" style="padding:9px 10px;border-radius:6px;border:1px solid #dbe0dd;font:400 13px 'IBM Plex Sans';color:#0f1512;outline:none" />
+        <div style="font:400 11px 'JetBrains Mono';color:#b7bdba;text-align:right">{{ addFeatureDescriptionCount }}/100</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label style="font:600 11px 'JetBrains Mono';color:#7c8983;letter-spacing:.8px">FEATURE DETAILS</label>
+        <div style="display:flex;gap:4px;border-bottom:1px solid #dbe0dd">
+          <div onClick="{{ selectBriefTab }}" style="{{ briefTabStyle }}">Type here</div>
+          <div onClick="{{ selectAttachmentTab }}" style="{{ attachmentTabStyle }}">Attach MD file</div>
+        </div>
+        <sc-if value="{{ isBriefTab }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <textarea value="{{ addFeatureBrief }}" onChange="{{ updateAddFeatureBrief }}" maxLength="2500" placeholder="Describe what this feature should do..." style="padding:10px;border-radius:6px;border:1px solid #dbe0dd;font:400 13px 'IBM Plex Sans';color:#0f1512;outline:none;resize:vertical;min-height:110px;font-family:inherit"></textarea>
+          <div style="font:400 11px 'JetBrains Mono';color:#b7bdba;text-align:right">{{ addFeatureBriefCount }}/2500</div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ isAttachmentTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+          <div onClick="{{ pickAddFeatureFile }}" style="padding:8px 14px;border-radius:6px;border:1px solid #dbe0dd;font:500 12px 'IBM Plex Sans';color:#0f1512;cursor:pointer;flex:none" style-hover="background:#f3f5f4">Choose File</div>
+          <div style="font:400 12px 'IBM Plex Mono';color:#4a544d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ addFeatureFileLabel }}</div>
+        </div>
+        </sc-if>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <sc-if value="{{ isUpdateFeatureMode }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ requestRemoveFeature }}" style="padding:9px 16px;border-radius:6px;background:#a13030;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#8a2828">Remove Feature</div>
+        </sc-if>
+        <sc-if value="{{ isCreateFeatureMode }}" hint-placeholder-val="{{ true }}"><div></div></sc-if>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div onClick="{{ requestDiscardAddFeature }}" style="padding:9px 16px;border-radius:6px;border:1px solid #dbe0dd;background:#fff;color:#4a544d;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#f3f5f4">Discard</div>
+          <div onClick="{{ saveAddFeature }}" style="{{ saveAddFeatureButtonStyle }}">Save</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showRemoveFeatureConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,21,18,.65);z-index:130;display:flex;align-items:center;justify-content:center">
+    <div style="width:400px;background:#ffffff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:24px;display:flex;flex-direction:column;gap:16px">
+      <div style="font:600 16px 'IBM Plex Sans';color:#0f1512">Remove "{{ removeFeatureTitle }}"?</div>
+      <div style="font:400 13px 'IBM Plex Sans';color:#4a544d;line-height:1.5">This removes the feature and its journal entries. This can't be undone.</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <div onClick="{{ cancelRemoveFeature }}" style="padding:9px 16px;border-radius:6px;border:1px solid #dbe0dd;font:500 13px 'IBM Plex Sans';color:#0f1512;cursor:pointer" style-hover="background:#f3f5f4">Cancel</div>
+        <div onClick="{{ confirmRemoveFeature }}" style="padding:9px 16px;border-radius:6px;background:#a13030;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#8a2828">Remove Feature</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showAddFeatureDiscardConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,21,18,.65);z-index:130;display:flex;align-items:center;justify-content:center">
+    <div style="width:380px;background:#ffffff;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:24px;display:flex;flex-direction:column;gap:16px">
+      <div style="font:600 16px 'IBM Plex Sans';color:#0f1512">Discard this feature?</div>
+      <div style="font:400 13px 'IBM Plex Sans';color:#4a544d;line-height:1.5">You have unsaved changes. Discard them?</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+        <div onClick="{{ keepEditingAddFeature }}" style="padding:9px 16px;border-radius:6px;border:1px solid #dbe0dd;font:500 13px 'IBM Plex Sans';color:#0f1512;cursor:pointer" style-hover="background:#f3f5f4">Keep Editing</div>
+        <div onClick="{{ confirmDiscardAddFeature }}" style="padding:9px 16px;border-radius:6px;background:#a13030;color:#fff;font:500 13px 'IBM Plex Sans';cursor:pointer" style-hover="background:#8a2828">Discard</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    projectExpanded: true,
+    usageExpanded: true,
+    questionAnswer: null,
+    replyText: '',
+    activeTab: 'terminal',
+    agent1Expanded: true,
+    agent2Expanded: false,
+    agent3Expanded: false,
+    searchProjectExpanded: false,
+    billingProjectExpanded: false,
+    thirdProjectExpanded: false,
+    selectedFeature: '001',
+    viewMode: 'journal',
+    closedColumnCollapsed: false,
+    boardProject: 'checkout',
+    starterText: '',
+    hoveredProject: null,
+    openProjectMenu: null,
+    projectNames: { checkout: 'Checkout Redesign', search: 'Search Revamp', billing: 'Billing v2', third: 'Notifications' },
+    projectFolders: {
+      checkout: '/Users/alex/projects/checkout-redesign',
+      search: '/Users/alex/projects/search-revamp',
+      billing: '/Users/alex/projects/billing-v2',
+      third: '/Users/alex/projects/notifications',
+    },
+    projectVisible: { checkout: true, search: true, billing: true, third: true },
+    removeConfirmProject: null,
+    editingProject: null,
+    editDraftName: '',
+    editDraftFolder: '',
+    showDiscardConfirm: false,
+    addFeatureMenuOpen: null,
+    showAddFeatureModal: false,
+    addFeatureProject: null,
+    addFeatureTitle: '',
+    addFeatureBrief: '',
+    addFeatureFileName: '',
+    featureIdCounter: 9,
+    addFeatureTab: 'brief',
+    showAddFeatureDiscardConfirm: false,
+    hoveredFeature: null,
+    addFeatureMode: 'create',
+    addFeatureEditingId: null,
+    addFeatureOriginal: { title: '', brief: '', fileName: '', description: '' },
+    addFeatureDescription: '',
+    showRemoveFeatureConfirm: false,
+    menuAnchor: null,
+    detailsIconHovered: false,
+    detailsPanelHovered: false,
+    detailsPinned: false,
+    statusChipHovered: false,
+    quickPhrasesCanScrollLeft: false,
+    quickPhrasesCanScrollRight: false,
+  };
+
+  onDetailsIconEnter = () => this.setState({ detailsIconHovered: true });
+  onDetailsIconLeave = () => this.setState({ detailsIconHovered: false });
+  onDetailsPanelEnter = () => this.setState({ detailsPanelHovered: true });
+  onDetailsPanelLeave = () => this.setState({ detailsPanelHovered: false });
+  toggleDetailsPin = () => this.setState(s => ({ detailsPinned: !s.detailsPinned }));
+
+  onStatusChipEnter = () => this.setState({ statusChipHovered: true });
+  onStatusChipLeave = () => this.setState({ statusChipHovered: false });
+  performStatusAction = (newStatus) => {
+    this.features[this.state.selectedFeature].status = newStatus;
+    this.setState({ statusChipHovered: false });
+  };
+
+  folderInputRef = React.createRef();
+  threadRef = React.createRef();
+  quickPhrasesRef = React.createRef();
+
+  __prevDetailsVisible = false;
+  __prevSelectedFeature = null;
+
+  pushMessage = (text) => {
+    const t = (text || '').trim();
+    if (!t) return;
+    const f = this.features[this.state.selectedFeature];
+    const now = new Date();
+    const time = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+    f.thread.push({ sender: 'you', time, text: t });
+    this.forceUpdate();
+    requestAnimationFrame(() => { if (this.threadRef.current) this.threadRef.current.scrollTop = this.threadRef.current.scrollHeight; });
+  };
+
+  quickPhraseClick = (text) => () => this.pushMessage(text);
+
+  quickPhrasesFor(status) {
+    const map = {
+      parked: ['Start this feature.'],
+      active: ["What's the status?", 'Show me the diff so far', 'Any blockers I should know about?'],
+      blocked: ['Help me unblock this', "What's blocking this?"],
+      closed: [],
+    };
+    return map[status] || [];
+  }
+
+  checkQuickScroll = () => {
+    const el = this.quickPhrasesRef.current;
+    if (!el) return;
+    this.setState({
+      quickPhrasesCanScrollLeft: el.scrollLeft > 4,
+      quickPhrasesCanScrollRight: el.scrollLeft < el.scrollWidth - el.clientWidth - 4,
+    });
+  };
+  chipLeft = (el, kid) => kid.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft;
+  scrollQuickLeft = () => {
+    const el = this.quickPhrasesRef.current;
+    if (!el) return;
+    const kids = Array.from(el.children);
+    let target = 0;
+    for (let i = kids.length - 1; i >= 0; i--) {
+      const pos = this.chipLeft(el, kids[i]);
+      if (pos < el.scrollLeft - 2) { target = pos; break; }
+    }
+    el.scrollTo({ left: target, behavior: 'smooth' });
+  };
+  scrollQuickRight = () => {
+    const el = this.quickPhrasesRef.current;
+    if (!el) return;
+    const kids = Array.from(el.children);
+    for (const kid of kids) {
+      const pos = this.chipLeft(el, kid);
+      if (pos > el.scrollLeft + 2) { el.scrollTo({ left: pos, behavior: 'smooth' }); return; }
+    }
+  };
+
+  componentDidUpdate(prevProps) {
+    const isVisible = this.state.detailsIconHovered || this.state.detailsPanelHovered || this.state.detailsPinned;
+    if (this.__prevDetailsVisible !== isVisible && this.threadRef.current) {
+      this.threadRef.current.scrollTop = this.threadRef.current.scrollHeight;
+    }
+    this.__prevDetailsVisible = isVisible;
+    if (this.__prevSelectedFeature !== this.state.selectedFeature) {
+      this.__prevSelectedFeature = this.state.selectedFeature;
+      if (this.quickPhrasesRef.current) this.quickPhrasesRef.current.scrollLeft = 0;
+    }
+    setTimeout(this.checkQuickScroll, 0);
+  }
+
+  componentDidMount() {
+    setTimeout(this.checkQuickScroll, 0);
+  }
+
+  toggleClosedColumn = () => this.setState(s => ({ closedColumnCollapsed: !s.closedColumnCollapsed }));
+
+  selectCheckoutProject = () => this.state.viewMode === 'board' ? this.setState({ boardProject: 'checkout' }) : this.toggleProject();
+  selectSearchProject = () => this.state.viewMode === 'board' ? this.setState({ boardProject: 'search' }) : this.toggleSearchProject();
+  selectBillingProject = () => this.state.viewMode === 'board' ? this.setState({ boardProject: 'billing' }) : this.toggleBillingProject();
+  selectThirdProject = () => this.state.viewMode === 'board' ? this.setState({ boardProject: 'third' }) : this.toggleThirdProject();
+
+  toggleView = () => this.setState(s => ({ viewMode: s.viewMode === 'journal' ? 'board' : 'journal' }));
+  toggleEmptyPreview = () => this.setState(s => ({ viewMode: s.viewMode === 'empty' ? 'journal' : 'empty' }));
+  onStarterChange = (e) => this.setState({ starterText: e.target.value });
+  onStarterKeyDown = (e) => { if (e.key === 'Enter') this.startFirstProject(); };
+  startFirstProject = () => this.setState({ viewMode: 'journal', starterText: '' });
+  fillExample1 = () => this.setState({ starterText: 'Add payment retry logic' });
+  fillExample2 = () => this.setState({ starterText: 'Rewrite empty state copy' });
+  fillExample3 = () => this.setState({ starterText: 'Improve search ranking' });
+  hoverProject_checkout = () => this.setState({ hoveredProject: 'checkout' });
+  hoverProject_search = () => this.setState({ hoveredProject: 'search' });
+  hoverProject_billing = () => this.setState({ hoveredProject: 'billing' });
+  hoverProject_third = () => this.setState({ hoveredProject: 'third' });
+  unhoverProject = () => this.setState({ hoveredProject: null });
+  toggleProjectMenu = (p) => (e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    this.setState(s => ({ openProjectMenu: s.openProjectMenu === p ? null : p, addFeatureMenuOpen: null, menuAnchor: { top: rect.bottom + 4, right: window.innerWidth - rect.right } }));
+  };
+  closeProjectMenu = () => this.setState({ openProjectMenu: null, addFeatureMenuOpen: null });
+  stopProp = (e) => e.stopPropagation();
+
+  toggleAddFeatureMenu = (p) => (e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    this.setState(s => ({ addFeatureMenuOpen: s.addFeatureMenuOpen === p ? null : p, openProjectMenu: null, menuAnchor: { top: rect.bottom + 4, right: window.innerWidth - rect.right } }));
+  };
+  openAddFeatureModal = (p) => () => this.setState({ addFeatureMenuOpen: null, showAddFeatureModal: true, addFeatureProject: p, addFeatureTitle: '', addFeatureBrief: '', addFeatureFileName: '', addFeatureDescription: '', addFeatureTab: 'brief', addFeatureMode: 'create', addFeatureEditingId: null, addFeatureOriginal: { title: '', brief: '', fileName: '', description: '' } });
+  openUpdateFeatureModal = (id) => () => {
+    const f = this.features[id];
+    this.setState({
+      showAddFeatureModal: true,
+      addFeatureProject: this.featureProjectMap[id],
+      addFeatureMode: 'update',
+      addFeatureEditingId: id,
+      addFeatureTitle: f.title || '',
+      addFeatureBrief: f.brief || '',
+      addFeatureFileName: f.fileName || '',
+      addFeatureDescription: f.description || '',
+      addFeatureTab: 'brief',
+      addFeatureOriginal: { title: f.title || '', brief: f.brief || '', fileName: f.fileName || '', description: f.description || '' },
+    });
+  };
+  updateAddFeatureDescription = (e) => this.setState({ addFeatureDescription: e.target.value.slice(0, 100) });
+  requestDiscardAddFeature = () => this.setState(s => this.isAddFeatureDirty(s) ? { showAddFeatureDiscardConfirm: true } : { showAddFeatureModal: false, addFeatureProject: null, addFeatureTitle: '', addFeatureBrief: '', addFeatureFileName: '' });
+  keepEditingAddFeature = () => this.setState({ showAddFeatureDiscardConfirm: false });
+  confirmDiscardAddFeature = () => this.setState({ showAddFeatureDiscardConfirm: false, showAddFeatureModal: false, addFeatureProject: null, addFeatureTitle: '', addFeatureBrief: '', addFeatureFileName: '' });
+  selectBriefTab = () => this.setState({ addFeatureTab: 'brief' });
+  selectAttachmentTab = () => this.setState({ addFeatureTab: 'attachment' });
+  requestRemoveFeature = () => this.setState({ showRemoveFeatureConfirm: true });
+  cancelRemoveFeature = () => this.setState({ showRemoveFeatureConfirm: false });
+  confirmRemoveFeature = () => this.setState(s => {
+    const id = s.addFeatureEditingId;
+    if (id) { delete this.features[id]; delete this.featureProjectMap[id]; }
+    return {
+      showRemoveFeatureConfirm: false,
+      showAddFeatureModal: false,
+      addFeatureProject: null,
+      addFeatureEditingId: null,
+      addFeatureTitle: '',
+      addFeatureBrief: '',
+      addFeatureFileName: '',
+      selectedFeature: s.selectedFeature === id ? '001' : s.selectedFeature,
+    };
+  });
+  updateAddFeatureTitle = (e) => this.setState({ addFeatureTitle: e.target.value.slice(0, 50) });
+  updateAddFeatureBrief = (e) => this.setState({ addFeatureBrief: e.target.value.slice(0, 2500) });
+  addFeatureFileRef = React.createRef();
+  pickAddFeatureFile = () => { if (this.addFeatureFileRef.current) this.addFeatureFileRef.current.click(); };
+  onAddFeatureFilePicked = (e) => { const f = e.target.files && e.target.files[0]; this.setState({ addFeatureFileName: f ? f.name : '' }); };
+
+  nextDisplayIdFor(project) {
+    const nums = Object.keys(this.features).filter(id => this.featureProjectMap[id] === project).map(id => parseInt(this.features[id].displayId, 10));
+    const max = nums.length ? Math.max(...nums) : 0;
+    return String(max + 1).padStart(3, '0');
+  }
+
+  isAddFeatureDirty(s) {
+    const o = s.addFeatureOriginal || { title: '', brief: '', fileName: '', description: '' };
+    return s.addFeatureTitle !== o.title || s.addFeatureBrief !== o.brief || s.addFeatureFileName !== o.fileName || s.addFeatureDescription !== o.description;
+  }
+
+  saveAddFeature = () => {
+    const s = this.state;
+    if (!this.isAddFeatureDirty(s) || !s.addFeatureProject) return;
+    const project = s.addFeatureProject;
+
+    if (s.addFeatureMode === 'update' && s.addFeatureEditingId) {
+      const id = s.addFeatureEditingId;
+      const slug = (s.addFeatureTitle || 'untitled-feature').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'untitled-feature';
+      this.features[id] = { ...this.features[id], slug, title: s.addFeatureTitle || 'Untitled feature', brief: s.addFeatureBrief, fileName: s.addFeatureFileName, description: s.addFeatureDescription };
+      this.setState({ showAddFeatureModal: false, addFeatureProject: null, addFeatureEditingId: null, addFeatureTitle: '', addFeatureBrief: '', addFeatureFileName: '' });
+      return;
+    }
+
+    const displayId = this.nextDisplayIdFor(project);
+    const globalId = String(s.featureIdCounter).padStart(3, '0');
+    const slug = (s.addFeatureTitle || 'untitled-feature').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'untitled-feature';
+    this.features[globalId] = {
+      slug,
+      status: 'parked',
+      displayId,
+      phase: 'Spec',
+      title: s.addFeatureTitle || 'Untitled feature',
+      brief: s.addFeatureBrief,
+      fileName: s.addFeatureFileName,
+      description: s.addFeatureDescription,
+      type: 'Feature',
+      assignee: { type: 'minna' },
+      thread: [{ sender: 'minna', time: '—', text: 'Feature created' + (s.addFeatureBrief ? ': ' + s.addFeatureBrief : '.') }],
+    };
+    this.featureProjectMap[globalId] = project;
+    this.setState({
+      featureIdCounter: s.featureIdCounter + 1,
+      showAddFeatureModal: false,
+      addFeatureProject: null,
+      addFeatureTitle: '',
+      addFeatureBrief: '',
+      addFeatureFileName: '',
+      selectedFeature: globalId,
+      viewMode: 'journal',
+      projectExpanded: project === 'checkout' ? true : s.projectExpanded,
+      searchProjectExpanded: project === 'search' ? true : s.searchProjectExpanded,
+      billingProjectExpanded: project === 'billing' ? true : s.billingProjectExpanded,
+      thirdProjectExpanded: project === 'third' ? true : s.thirdProjectExpanded,
+    });
+  };
+
+  sidebarRowsFor(project) {
+    const s = this.state;
+    return Object.keys(this.features)
+      .filter(id => this.featureProjectMap[id] === project)
+      .sort((a, b) => parseInt(this.features[a].displayId, 10) - parseInt(this.features[b].displayId, 10))
+      .map(id => {
+        const hovered = s.hoveredFeature === id;
+        return {
+          displayId: this.features[id].displayId,
+          title: this.features[id].title,
+          slug: this.features[id].slug,
+          dotColor: this.dotColorMeta[this.features[id].status],
+          onClick: () => this.selectFeatureId(id),
+          style: this.rowStyle(id),
+          onMouseEnter: () => this.setState({ hoveredFeature: id }),
+          onMouseLeave: () => this.setState({ hoveredFeature: null }),
+          iconStyle: 'width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex:none;' + (hovered ? 'opacity:1;' : 'opacity:0;pointer-events:none;'),
+          onEllipsisClick: (e) => { e.stopPropagation(); this.openUpdateFeatureModal(id)(); },
+        };
+      });
+  }
+
+  editProject = (p) => () => this.setState(s => ({
+    openProjectMenu: null,
+    editingProject: p,
+    editDraftName: s.projectNames[p],
+    editDraftFolder: s.projectFolders[p],
+  }));
+
+  removeProject = (p) => () => this.setState({ openProjectMenu: null, removeConfirmProject: p });
+  removeFromEditModal = () => this.setState(s => ({ removeConfirmProject: s.editingProject }));
+  cancelRemoveConfirm = () => this.setState({ removeConfirmProject: null });
+  confirmRemoveConfirm = () => this.setState(s => ({
+    removeConfirmProject: null,
+    editingProject: null,
+    projectVisible: { ...s.projectVisible, [s.removeConfirmProject]: false },
+  }));
+
+  updateEditName = (e) => { const v = e.target.value; this.setState({ editDraftName: v }); };
+  pickFolder = () => { if (this.folderInputRef.current) this.folderInputRef.current.click(); };
+  onFolderPicked = (e) => {
+    const files = e.target.files;
+    if (files && files.length) {
+      const top = (files[0].webkitRelativePath || files[0].name).split('/')[0];
+      this.setState({ editDraftFolder: '/Users/alex/projects/' + top });
+    }
+  };
+
+  hasEditChanges = (s) => !!s.editingProject && (s.editDraftName !== s.projectNames[s.editingProject] || s.editDraftFolder !== s.projectFolders[s.editingProject]);
+
+  saveEdit = () => this.setState(s => {
+    if (!s.editingProject || !this.hasEditChanges(s)) return null;
+    return {
+      projectNames: { ...s.projectNames, [s.editingProject]: s.editDraftName },
+      projectFolders: { ...s.projectFolders, [s.editingProject]: s.editDraftFolder },
+      editingProject: null,
+    };
+  });
+
+  cancelEdit = () => this.setState(s => this.hasEditChanges(s) ? { showDiscardConfirm: true } : { editingProject: null });
+  keepEditing = () => this.setState({ showDiscardConfirm: false });
+  confirmDiscard = () => this.setState({ showDiscardConfirm: false, editingProject: null });
+
+  features = {
+    '001': { slug: 'cart-drawer-refactor', status: 'active', displayId: '001', phase: 'Implement', title: 'Cart drawer refactor',
+      type: 'Feature', assignee: { type: 'agent', name: 'agent-1', code: 'A1', color: '#e08a2e' },
+      description: 'Replace the legacy cart modal with a slide-in drawer component.',
+      thread: [
+        { sender: 'minna', time: '0902', text: 'Kicking off the cart drawer refactor. Spinning up agent 1 to scaffold the component.' },
+        { sender: 'agent-1', time: '0903', text: 'Scaffolded <CartDrawer/>. Wiring up state next — see terminal 1.' },
+        { sender: 'agent-1', time: '0907', text: 'State wiring done. Open/close now driven by a single isOpen prop, with a slide transition.' },
+        { sender: 'minna', time: '0908', text: 'Nice. Go ahead and wire it into the existing cart icon click handler.' },
+        { sender: 'agent-1', time: '0911', text: 'Wired up. Clicking the cart icon now opens the new drawer instead of the old modal.' },
+        { sender: 'agent-1', time: '0915', text: 'Added unit tests for open/close transitions — 6 passing.' },
+        { sender: 'minna', time: '0916', text: 'Great progress. Let’s also make sure it works on mobile viewport widths.' },
+        { sender: 'agent-1', time: '0921', text: 'Tested at 375px and 414px widths — drawer now goes full-width below 480px.' },
+      ] },
+    '002': { slug: 'payment-retries', status: 'blocked', displayId: '002', phase: 'Implement', blockerReason: 'Clarification', title: 'Payment retries',
+      type: 'Bug Fix', assignee: { type: 'agent', name: 'agent-2', code: 'A2', color: '#4a544d' },
+      description: 'Retry failed payments automatically using exponential backoff.',
+      thread: [
+        { sender: 'minna', time: '0810', text: 'Starting payment retry logic. Agent 2 assigned.' },
+        { sender: 'agent-2', time: '0814', text: 'Retry backoff implemented, but Stripe and internal ledger disagree on max attempts.' },
+        { sender: 'agent-2', time: '0815', text: 'Should we cap retries at 3 attempts, or match Stripe’s default of 5?', decision: true },
+      ] },
+    '003': { slug: 'empty-state-copy', status: 'closed', displayId: '003', phase: 'Integration', title: 'Empty state copy',
+      type: 'Copy', assignee: { type: 'agent', name: 'agent-3', code: 'A3', color: '#c0392b' },
+      description: 'Rewrite empty state copy across cart, search, and orders.',
+      thread: [
+        { sender: 'minna', time: '0601', text: 'Kicking off the empty state copy pass. Agent 3 assigned.' },
+        { sender: 'agent-3', time: '0604', text: 'Pulled the list of empty states across the app — 9 total.' },
+        { sender: 'agent-3', time: '0609', text: 'Drafted copy for cart, search, and orders empty states.' },
+        { sender: 'minna', time: '0610', text: 'Looks good. Keep the tone consistent with the rest of the app — friendly but brief.' },
+        { sender: 'agent-3', time: '0615', text: 'Adjusted tone across all drafts. Ready for review.' },
+        { sender: 'minna', time: '0616', text: 'Reviewed — approved. Go ahead and open a PR.' },
+        { sender: 'agent-3', time: '0619', text: 'PR opened: #482 empty-state-copy-pass.' },
+        { sender: 'agent-3', time: '0625', text: 'CI passed. No visual regressions.' },
+        { sender: 'minna', time: '0628', text: 'Merging now.' },
+        { sender: 'agent-3', time: '0630', text: 'Merged. All 6 empty states across cart, search, and orders are live.' },
+        { sender: 'minna', time: '0631', text: 'Nice work — closing this one out.' },
+      ] },
+    '004': { slug: 'fuzzy-match-ranking', status: 'parked', displayId: '001', phase: 'Spec', title: 'Fuzzy match ranking',
+      type: 'Feature', assignee: { type: 'minna' },
+      description: 'Rank fuzzy search matches by relevance instead of alphabetically.',
+      thread: [
+        { sender: 'minna', time: '—', text: 'Parked. Waiting on prioritization before agents are assigned.' },
+      ] },
+    '005': { slug: 'search-analytics', status: 'parked', displayId: '002', phase: 'Plan', title: 'Search analytics',
+      type: 'Feature', assignee: { type: 'minna' },
+      description: 'Track search query volume and zero-result rate.',
+      thread: [
+        { sender: 'minna', time: '—', text: 'Parked. No agents assigned yet.' },
+      ] },
+    '006': { slug: 'invoice-pdf-export', status: 'blocked', displayId: '001', phase: 'Implement', blockerReason: 'External Dependency', title: 'Invoice PDF export',
+      type: 'Feature', assignee: { type: 'agent', name: 'agent-1', code: 'A1', color: '#e08a2e' },
+      description: 'Generate a downloadable PDF export of customer invoices.',
+      thread: [
+        { sender: 'minna', time: '0511', text: 'Invoice PDF export underway with agent 1.' },
+        { sender: 'agent-1', time: '0517', text: 'PDF renders, but the layout engine can’t access the customer logo asset.' },
+        { sender: 'agent-1', time: '0518', text: 'Should we ship without the logo for now, or block until the asset pipeline is fixed?', decision: true },
+      ] },
+    '007': { slug: 'proration-logic', status: 'parked', displayId: '002', phase: 'Tasks', title: 'Proration logic',
+      type: 'Feature', assignee: { type: 'minna' },
+      description: 'Calculate prorated charges when customers change plans mid-cycle.',
+      thread: [
+        { sender: 'minna', time: '—', text: 'Parked. Queued behind invoice export.' },
+      ] },
+    '008': { slug: 'digest-emails', status: 'parked', displayId: '001', phase: 'Spec Review', title: 'Digest emails',
+      type: 'Feature', assignee: { type: 'minna' },
+      description: 'Send a weekly summary email of account activity.',
+      thread: [
+        { sender: 'minna', time: '—', text: 'Parked. Not yet scheduled.' },
+      ] },
+  };
+
+  statusMeta = {
+    parked: { label: 'PARKED', bg: '#dbe0dd', color: '#4a544d' },
+    active: { label: 'ACTIVE', bg: '#00F0FF', color: '#101614' },
+    blocked: { label: 'BLOCKED', bg: '#7a1f30', color: '#fff' },
+    closed: { label: 'CLOSED', bg: '#2f9e44', color: '#fff' },
+  };
+
+  dotColorMeta = {
+    parked: '#9a9a94',
+    active: '#00c9d6',
+    blocked: '#7a1f30',
+    closed: '#2f9e44',
+  };
+
+  toggleSearchProject = () => this.setState(s => ({ searchProjectExpanded: !s.searchProjectExpanded }));
+  toggleBillingProject = () => this.setState(s => ({ billingProjectExpanded: !s.billingProjectExpanded }));
+  toggleThirdProject = () => this.setState(s => ({ thirdProjectExpanded: !s.thirdProjectExpanded }));
+  selectFeatureId = (id) => this.setState({ selectedFeature: id, detailsIconHovered: false, detailsPanelHovered: false, detailsPinned: false });
+
+  toggleProject = () => this.setState(s => ({ projectExpanded: !s.projectExpanded }));
+  toggleUsage = () => this.setState(s => ({ usageExpanded: !s.usageExpanded }));
+  selectFeature = () => {};
+  noop = () => {};
+
+  answerOutsideClick = () => this.setState({ questionAnswer: 'close_on_outside_click' });
+  answerXButton = () => this.setState({ questionAnswer: 'x_button_only' });
+
+  onReplyChange = (e) => this.setState({ replyText: e.target.value });
+  onReplyKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendReply(); } };
+  sendReply = () => { this.pushMessage(this.state.replyText); this.setState({ replyText: '' }); };
+
+  selectTerminalTab = () => this.setState({ activeTab: 'terminal' });
+  selectMdTab = () => this.setState({ activeTab: 'md' });
+  selectDiffTab = () => this.setState({ activeTab: 'diff' });
+
+  toggleAgent1 = () => this.setState(s => ({ agent1Expanded: !s.agent1Expanded }));
+  toggleAgent2 = () => this.setState(s => ({ agent2Expanded: !s.agent2Expanded }));
+  toggleAgent3 = () => this.setState(s => ({ agent3Expanded: !s.agent3Expanded }));
+
+  tabStyle(active) {
+    const base = 'flex:1;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;';
+    return active
+      ? base + "color:#101614;background:#00F0FF;font:600 13px 'JetBrains Mono';"
+      : base + "color:#8f9a94;background:#eceff0;font:400 13px 'JetBrains Mono';";
+  }
+
+  renderVals() {
+    const s = this.state;
+    return {
+      projectExpanded: s.projectExpanded,
+      usageExpanded: s.usageExpanded,
+      usageChevron: s.usageExpanded ? '▾' : '▸',
+      toggleProject: this.toggleProject,
+      toggleUsage: this.toggleUsage,
+      selectFeature: this.selectFeature,
+      noop: this.noop,
+      questionAnswered: !!s.questionAnswer,
+      questionUnanswered: !s.questionAnswer,
+      questionAnswer: s.questionAnswer,
+      answerOutsideClick: this.answerOutsideClick,
+      answerXButton: this.answerXButton,
+      replyText: s.replyText,
+      onReplyChange: this.onReplyChange,
+      onReplyKeyDown: this.onReplyKeyDown,
+      sendReply: this.sendReply,
+      isTerminalTab: s.activeTab === 'terminal',
+      isMdTab: s.activeTab === 'md',
+      isDiffTab: s.activeTab === 'diff',
+      selectTerminalTab: this.selectTerminalTab,
+      selectMdTab: this.selectMdTab,
+      selectDiffTab: this.selectDiffTab,
+      terminalTabStyle: this.tabStyle(s.activeTab === 'terminal'),
+      mdTabStyle: this.tabStyle(s.activeTab === 'md'),
+      diffTabStyle: this.tabStyle(s.activeTab === 'diff'),
+      agent1Expanded: s.agent1Expanded,
+      agent2Expanded: s.agent2Expanded,
+      agent3Expanded: s.agent3Expanded,
+      agent1Chevron: s.agent1Expanded ? '▾' : '▸',
+      agent2Chevron: s.agent2Expanded ? '▾' : '▸',
+      agent3Chevron: s.agent3Expanded ? '▾' : '▸',
+      toggleAgent1: this.toggleAgent1,
+      toggleAgent2: this.toggleAgent2,
+      toggleAgent3: this.toggleAgent3,
+      projectChevron: s.projectExpanded ? '▾' : '▸',
+      agent1PaneStyle: s.agent1Expanded ? 'flex:1;min-height:0;display:flex;flex-direction:column;' : 'flex:none;display:flex;flex-direction:column;',
+      agent2PaneStyle: s.agent2Expanded ? 'flex:1;min-height:0;display:flex;flex-direction:column;' : 'flex:none;display:flex;flex-direction:column;',
+      agent3PaneStyle: s.agent3Expanded ? 'flex:1;min-height:0;display:flex;flex-direction:column;' : 'flex:none;display:flex;flex-direction:column;',
+      searchProjectExpanded: s.searchProjectExpanded,
+      billingProjectExpanded: s.billingProjectExpanded,
+      thirdProjectExpanded: s.thirdProjectExpanded,
+      searchProjectChevron: s.searchProjectExpanded ? '▾' : '▸',
+      billingProjectChevron: s.billingProjectExpanded ? '▾' : '▸',
+      thirdProjectChevron: s.thirdProjectExpanded ? '▾' : '▸',
+      toggleSearchProject: this.toggleSearchProject,
+      toggleBillingProject: this.toggleBillingProject,
+      toggleThirdProject: this.toggleThirdProject,
+      hoverProject_checkout: this.hoverProject_checkout,
+      hoverProject_search: this.hoverProject_search,
+      hoverProject_billing: this.hoverProject_billing,
+      hoverProject_third: this.hoverProject_third,
+      unhoverProject: this.unhoverProject,
+      selectCheckoutProject: this.selectCheckoutProject,
+      selectSearchProject: this.selectSearchProject,
+      selectBillingProject: this.selectBillingProject,
+      selectThirdProject: this.selectThirdProject,
+      toggleView: this.toggleView,
+      isJournalView: s.viewMode === 'journal',
+      isBoardView: s.viewMode === 'board',
+      isEmptyView: s.viewMode === 'empty',
+      isNonEmptyView: s.viewMode !== 'empty',
+      emptyToggleColor: s.viewMode === 'empty' ? '#00c9d6' : '#7c8983',
+      emptyToggleWrapStyle: `margin-left:${s.viewMode === 'empty' ? 'auto' : '0'};width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:${s.viewMode === 'empty' ? '#00c9d6' : '#7c8983'}`,
+      showEmptyUsage: s.viewMode === 'empty' && s.usageExpanded,
+      showRealUsage: s.viewMode !== 'empty' && s.usageExpanded,
+      starterText: s.starterText,
+      onStarterChange: this.onStarterChange,
+      onStarterKeyDown: this.onStarterKeyDown,
+      startFirstProject: this.startFirstProject,
+      fillExample1: this.fillExample1,
+      fillExample2: this.fillExample2,
+      fillExample3: this.fillExample3,
+      toggleEmptyPreview: this.toggleEmptyPreview,
+      showCheckoutFeatures: s.projectExpanded && s.viewMode === 'journal',
+      showSearchFeatures: s.searchProjectExpanded && s.viewMode === 'journal',
+      showBillingFeatures: s.billingProjectExpanded && s.viewMode === 'journal',
+      showThirdFeatures: s.thirdProjectExpanded && s.viewMode === 'journal',
+      ...this.featureVals(),
+    };
+  }
+
+  rowStyle(id) {
+    const active = this.state.selectedFeature === id;
+    const blocked = this.features[id].status === 'blocked';
+    const base = 'display:flex;align-items:center;gap:8px;font:400 12px \'IBM Plex Mono\';padding:6px 8px;cursor:pointer;border-radius:5px;';
+    if (blocked) return base + (active ? 'color:#0f1512;background:#f2dfa8;' : 'color:#4a544d;background:#f7ecc8;');
+    return active
+      ? base + 'color:#0f1512;background:#dfe6e2;'
+      : base + 'color:#4a544d;background:transparent;';
+  }
+
+  projectHeaderStyle(projectHasBlocked, expanded, selected, baseStyle) {
+    if (selected) return baseStyle + 'background:#00F0FF;color:#0f1512;';
+    if (projectHasBlocked && !expanded) return baseStyle + 'background:#f7ecc8;color:#4a544d;';
+    return baseStyle + 'background:transparent;color:#4a544d;';
+  }
+
+  featureVals() {
+    const s = this.state;
+    const f = this.features[s.selectedFeature];
+    const meta = this.statusMeta[f.status];
+    const vals = {
+      selectedId: f.displayId,
+      selectedSlug: f.slug,
+      selectedStatusLabel: meta.label,
+      selectedStatusStyle: `background:${meta.bg};color:${meta.color};padding:5px 14px;border-radius:4px;font:700 12px 'JetBrains Mono';`,
+      gitInfo: `(a1c9e42) feat/${f.slug}`,
+      isAssigneeMinna: f.assignee.type === 'minna',
+      isAssigneeAgent: f.assignee.type === 'agent',
+      assigneeAgentColor: f.assignee.color || '#7c8983',
+      assigneeAgentCode: f.assignee.code || '?',
+      detailsTitle: f.title,
+      detailsType: f.type || 'Feature',
+      detailsAssigneeLabel: f.assignee.type === 'minna' ? 'Minna' : f.assignee.name,
+      detailsDescription: f.description || '',
+      isDetailsPanelVisible: s.detailsIconHovered || s.detailsPanelHovered || s.detailsPinned,
+      isDetailsPanelHidden: !(s.detailsIconHovered || s.detailsPanelHovered || s.detailsPinned),
+      onDetailsIconEnter: this.onDetailsIconEnter,
+      onDetailsIconLeave: this.onDetailsIconLeave,
+      onDetailsPanelEnter: this.onDetailsPanelEnter,
+      onDetailsPanelLeave: this.onDetailsPanelLeave,
+      toggleDetailsPin: this.toggleDetailsPin,
+      threadRef: this.threadRef,
+      threadMessages: f.thread.map((m, i) => {
+        const isMinna = m.sender === 'minna';
+        const isUser = m.sender === 'you';
+        const isLast = i === f.thread.length - 1;
+        return {
+          sender: isUser ? 'You' : m.sender,
+          time: m.time,
+          text: m.text,
+          direction: isUser ? 'row-reverse' : 'row',
+          textAlign: isUser ? 'right' : 'left',
+          initials: isUser ? 'Y' : (isMinna ? 'M' : m.sender.replace('agent-', 'A')),
+          avatarBg: isUser ? '#00c9d6' : (isMinna ? '#0f1512' : '#e08a2e'),
+          avatarColor: isUser ? '#101614' : (isMinna ? '#00F0FF' : '#101614'),
+          bubbleBg: isUser ? '#dff7f8' : '#e5e9e6',
+          bubbleBorder: (m.decision && isLast) ? '1px solid #dbe0dd' : 'none',
+          isPendingDecision: !!m.decision && isLast && !s.questionAnswer,
+          isResolvedDecision: !!m.decision && isLast && !!s.questionAnswer,
+        };
+      }),
+      hasStatusActions: f.status !== 'closed',
+      showStatusMenu: s.statusChipHovered && f.status !== 'closed',
+      onStatusChipEnter: this.onStatusChipEnter,
+      onStatusChipLeave: this.onStatusChipLeave,
+      statusActions: (f.status === 'parked'
+        ? [{ label: 'Close', onClick: () => this.performStatusAction('closed') }]
+        : (f.status === 'active' || f.status === 'blocked')
+          ? [{ label: 'Pause', onClick: () => this.performStatusAction('parked') }, { label: 'Close', onClick: () => this.performStatusAction('closed') }]
+          : []),
+      quickPhrases: this.quickPhrasesFor(f.status).map(text => ({ label: text, onClick: this.quickPhraseClick(text) })),
+      hasQuickPhrases: this.quickPhrasesFor(f.status).length > 0,
+      quickPhrasesRef: this.quickPhrasesRef,
+      checkQuickScroll: this.checkQuickScroll,
+      scrollQuickLeft: this.scrollQuickLeft,
+      scrollQuickRight: this.scrollQuickRight,
+      showQuickLeftChevron: s.quickPhrasesCanScrollLeft,
+      showQuickRightChevron: s.quickPhrasesCanScrollRight,
+      composeBarStyle: this.quickPhrasesFor(f.status).length > 0
+        ? 'border-top:none;padding:0 24px 10px;display:flex;gap:10px;align-items:center;'
+        : "border-top:1px solid #dbe0dd;padding:14px 24px 10px;display:flex;gap:10px;align-items:center;",
+    };
+    for (const id of Object.keys(this.features)) {
+      vals[`select${id}`] = () => this.selectFeatureId(id);
+      vals[`row${id}Style`] = this.rowStyle(id);
+    }
+    const featureProject = { '001':'checkout','002':'checkout','003':'checkout','004':'search','005':'search','006':'billing','007':'billing','008':'third' };
+    const activeProject = s.viewMode === 'board' ? s.boardProject : featureProject[s.selectedFeature];
+    vals.checkoutHeaderStyle = this.projectHeaderStyle(false, s.projectExpanded, activeProject === 'checkout',
+      "display:flex;align-items:center;gap:6px;padding:7px 9px 7px 2px;font:500 13px 'JetBrains Mono';cursor:pointer;user-select:none;border-radius:5px;");
+    vals.searchHeaderStyle = this.projectHeaderStyle(false, s.searchProjectExpanded, activeProject === 'search',
+      "display:flex;align-items:center;gap:6px;padding:7px 9px 7px 2px;font:400 13px 'JetBrains Mono';cursor:pointer;user-select:none;border-radius:5px;");
+    vals.billingHeaderStyle = this.projectHeaderStyle(true, s.billingProjectExpanded, activeProject === 'billing',
+      "display:flex;align-items:center;gap:6px;padding:7px 9px 7px 2px;font:400 13px 'JetBrains Mono';cursor:pointer;user-select:none;border-radius:5px;");
+    vals.thirdHeaderStyle = this.projectHeaderStyle(false, s.thirdProjectExpanded, activeProject === 'third',
+      "display:flex;align-items:center;gap:6px;padding:7px 9px 7px 2px;font:400 13px 'JetBrains Mono';cursor:pointer;user-select:none;border-radius:5px;");
+    const addIconBase = "width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex:none;";
+    ['checkout','search','billing','third'].forEach(p => {
+      const active = s.hoveredProject === p || s.openProjectMenu === p || s.addFeatureMenuOpen === p;
+      vals['addIconStyle_' + p] = addIconBase + (active ? 'opacity:1;' : 'opacity:0;pointer-events:none;');
+      vals['toggleMenu_' + p] = this.toggleProjectMenu(p);
+      vals['isMenuOpen_' + p] = s.openProjectMenu === p;
+      vals['editProject_' + p] = this.editProject(p);
+      vals['removeProject_' + p] = this.removeProject(p);
+      vals['projectName_' + p] = s.projectNames[p];
+      vals['isProjectVisible_' + p] = s.projectVisible[p];
+      vals['addFeatureToggle_' + p] = this.toggleAddFeatureMenu(p);
+      vals['isAddFeatureMenuOpen_' + p] = s.addFeatureMenuOpen === p;
+      vals['openAddFeature_' + p] = this.openAddFeatureModal(p);
+    });
+    vals.stopProp = this.stopProp;
+    vals.closeProjectMenu = this.closeProjectMenu;
+    vals.isAnyMenuOpen = !!s.openProjectMenu || !!s.addFeatureMenuOpen;
+    vals.popoverFixedStyle = s.menuAnchor
+      ? `position:fixed;top:${s.menuAnchor.top}px;right:${s.menuAnchor.right}px;background:#ffffff;border:1px solid #dbe0dd;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px;z-index:200;min-width:160px;display:flex;flex-direction:column;gap:1px;`
+      : 'display:none;';
+
+    vals.showRemoveConfirm = !!s.removeConfirmProject;
+    vals.removeConfirmProjectName = s.removeConfirmProject ? s.projectNames[s.removeConfirmProject] : '';
+    vals.cancelRemoveConfirm = this.cancelRemoveConfirm;
+    vals.confirmRemoveConfirm = this.confirmRemoveConfirm;
+
+    vals.showEditModal = !!s.editingProject;
+    vals.editDraftName = s.editDraftName;
+    vals.editDraftFolder = s.editDraftFolder;
+    vals.updateEditName = this.updateEditName;
+    vals.pickFolder = this.pickFolder;
+    vals.folderInputRef = this.folderInputRef;
+    vals.onFolderPicked = this.onFolderPicked;
+    vals.removeFromEditModal = this.removeFromEditModal;
+    vals.cancelEdit = this.cancelEdit;
+    vals.saveEdit = this.saveEdit;
+    const hasChanges = this.hasEditChanges(s);
+    vals.saveButtonStyle = "padding:9px 16px;border-radius:6px;font:500 13px 'IBM Plex Sans';border:none;" +
+      (hasChanges ? 'background:#00c9d6;color:#0f1512;cursor:pointer;' : 'background:#dfe6e2;color:#a7afac;cursor:not-allowed;');
+
+    vals.showDiscardConfirm = s.showDiscardConfirm;
+    vals.keepEditing = this.keepEditing;
+    vals.confirmDiscard = this.confirmDiscard;
+
+    vals.showAddFeatureModal = s.showAddFeatureModal;
+    vals.addFeatureModalTitle = s.addFeatureMode === 'update' ? 'Update Feature' : 'Add Feature';
+    vals.addFeatureProjectName = s.addFeatureProject ? this.projectNames[s.addFeatureProject] : '';
+    vals.addFeatureNumberDisplay = s.addFeatureMode === 'update' && s.addFeatureEditingId
+      ? this.features[s.addFeatureEditingId].displayId
+      : (s.addFeatureProject ? this.nextDisplayIdFor(s.addFeatureProject) : '');
+    vals.addFeatureTitle = s.addFeatureTitle;
+    vals.addFeatureBrief = s.addFeatureBrief;
+    vals.addFeatureTitleCount = s.addFeatureTitle.length;
+    vals.addFeatureBriefCount = s.addFeatureBrief.length;
+    vals.addFeatureFileLabel = s.addFeatureFileName || 'No file selected';
+    vals.updateAddFeatureTitle = this.updateAddFeatureTitle;
+    vals.updateAddFeatureBrief = this.updateAddFeatureBrief;
+    vals.pickAddFeatureFile = this.pickAddFeatureFile;
+    vals.onAddFeatureFilePicked = this.onAddFeatureFilePicked;
+    vals.addFeatureFileRef = this.addFeatureFileRef;
+    vals.requestDiscardAddFeature = this.requestDiscardAddFeature;
+    vals.showAddFeatureDiscardConfirm = s.showAddFeatureDiscardConfirm;
+    vals.keepEditingAddFeature = this.keepEditingAddFeature;
+    vals.confirmDiscardAddFeature = this.confirmDiscardAddFeature;
+    vals.isUpdateFeatureMode = s.addFeatureMode === 'update';
+    vals.isCreateFeatureMode = s.addFeatureMode === 'create';
+    vals.requestRemoveFeature = this.requestRemoveFeature;
+    vals.showRemoveFeatureConfirm = s.showRemoveFeatureConfirm;
+    vals.cancelRemoveFeature = this.cancelRemoveFeature;
+    vals.confirmRemoveFeature = this.confirmRemoveFeature;
+    vals.removeFeatureTitle = s.addFeatureEditingId ? (this.features[s.addFeatureEditingId].title || 'this feature') : '';
+    vals.featureTitleSubheader = s.addFeatureMode === 'update' ? '' : "Limit to 5 words or less. Choose carefully as it can't be updated later.";
+    vals.featureTitleInputStyle = "padding:9px 10px;border-radius:6px;border:1px solid #dbe0dd;font:400 13px 'IBM Plex Sans';outline:none;" +
+      (s.addFeatureMode === 'update' ? 'color:#a7afac;background:#f3f5f4;cursor:not-allowed;' : 'color:#0f1512;');
+    vals.addFeatureDescription = s.addFeatureDescription;
+    vals.addFeatureDescriptionCount = s.addFeatureDescription.length;
+    vals.updateAddFeatureDescription = this.updateAddFeatureDescription;
+    vals.isBriefTab = s.addFeatureTab === 'brief';
+    vals.isAttachmentTab = s.addFeatureTab === 'attachment';
+    vals.selectBriefTab = this.selectBriefTab;
+    vals.selectAttachmentTab = this.selectAttachmentTab;
+    const tabBase = "padding:8px 14px;font:500 12px 'IBM Plex Sans';cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;";
+    vals.briefTabStyle = tabBase + (s.addFeatureTab === 'brief' ? 'color:#0f1512;border-bottom-color:#00c9d6;' : 'color:#8f9a94;');
+    vals.attachmentTabStyle = tabBase + (s.addFeatureTab === 'attachment' ? 'color:#0f1512;border-bottom-color:#00c9d6;' : 'color:#8f9a94;');
+    vals.saveAddFeature = this.saveAddFeature;
+    const addFeatureDirty = this.isAddFeatureDirty(s);
+    vals.saveAddFeatureButtonStyle = "padding:9px 16px;border-radius:6px;font:500 13px 'IBM Plex Sans';border:none;" +
+      (addFeatureDirty ? 'background:#00c9d6;color:#0f1512;cursor:pointer;' : 'background:#dfe6e2;color:#a7afac;cursor:not-allowed;');
+
+    vals.checkoutFeatureRows = this.sidebarRowsFor('checkout');
+    vals.searchFeatureRows = this.sidebarRowsFor('search');
+    vals.billingFeatureRows = this.sidebarRowsFor('billing');
+    vals.thirdFeatureRows = this.sidebarRowsFor('third');
+    vals.boardProjectName = this.projectNames[activeProject];
+    vals.boardColumns = this.boardColumnsFor(activeProject);
+    vals.closedItems = this.itemsFor(activeProject, 'closed');
+    vals.closedCollapsed = s.closedColumnCollapsed;
+    vals.closedExpanded = !s.closedColumnCollapsed;
+    vals.toggleClosedColumn = this.toggleClosedColumn;
+    return vals;
+  }
+
+  projectNames = { checkout: 'Checkout Redesign', search: 'Search Revamp', billing: 'Billing v2', third: 'Notifications' };
+  featureProjectMap = { '001':'checkout','002':'checkout','003':'checkout','004':'search','005':'search','006':'billing','007':'billing','008':'third' };
+
+  itemsFor(activeProject, status) {
+    return Object.keys(this.features)
+      .filter(id => this.featureProjectMap[id] === activeProject && this.features[id].status === status)
+      .map(id => {
+        const f = this.features[id];
+        return {
+          displayId: f.displayId,
+          slug: f.slug,
+          phase: f.phase,
+          hasBlocker: !!f.blockerReason,
+          blockerReason: f.blockerReason || '',
+          openJournal: () => this.openFeatureJournal(id),
+        };
+      });
+  }
+
+  openFeatureJournal(id) {
+    const project = this.featureProjectMap[id];
+    this.setState({
+      viewMode: 'journal',
+      selectedFeature: id,
+      projectExpanded: project === 'checkout',
+      searchProjectExpanded: project === 'search',
+      billingProjectExpanded: project === 'billing',
+      thirdProjectExpanded: project === 'third',
+      detailsIconHovered: false,
+      detailsPanelHovered: false,
+      detailsPinned: false,
+    });
+  }
+
+  boardColumnsFor(activeProject) {
+    const order = [
+      { key: 'parked', label: 'PARKED', color: '#9a9a94' },
+      { key: 'active', label: 'ACTIVE', color: '#00c9d6' },
+      { key: 'blocked', label: 'BLOCKED', color: '#7a1f30' },
+    ];
+    return order.map(col => ({ ...col, items: this.itemsFor(activeProject, col.key) }));
+  }
+}
+
+</script>
+</body>
+</html>
