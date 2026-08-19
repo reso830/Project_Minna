@@ -41,7 +41,7 @@ export function InfoIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="15">
       <circle cx="12" cy="12" r="10" />
-      <path d="M12 11v5" />
+      <path d="M12 16v-4" />
       <path d="M12 8h.01" />
     </svg>
   );
