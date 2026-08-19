@@ -44,6 +44,7 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 const defaultFeatureId = mockFeatures[0]?.id ?? null;
 const defaultExpandedAgents = defaultFeatureId ? { [`${defaultFeatureId}-agent-1`]: true } : {};
+const mockFeatureIds = new Set(mockFeatures.map((feature) => feature.id));
 
 const cloneEvents = (): Record<string, WorkItemEvent[]> =>
   Object.fromEntries(Object.entries(mockEvents).map(([featureId, events]) => [featureId, [...events]]));
@@ -198,8 +199,12 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       if (!response.ok) return;
       const data: unknown = await response.json();
       if (!Array.isArray(data) || !data.every(isWorkItem)) return;
-      setFeatures(current => [...current.filter(feature => !projectMatchesFeature(project, feature)), ...data]);
+      setFeatures(current => [
+        ...current.filter(feature => !mockFeatureIds.has(feature.id) && !projectMatchesFeature(project, feature)),
+        ...data,
+      ]);
       setEvents(current => ({ ...current, ...Object.fromEntries(data.map(feature => [feature.id, current[feature.id] ?? []])) }));
+      setActiveFeatureId(current => (current && mockFeatureIds.has(current) ? data[0]?.id ?? null : current));
     } catch {
       // Existing local/demo state remains visible while the project database is unavailable.
     }
