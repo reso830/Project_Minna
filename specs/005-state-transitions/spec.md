@@ -55,6 +55,7 @@ This feature introduces operator-triggered state transitions in the Journal View
   - Replaces Feature 003's standalone `DropConfirmModal` and `POST /api/work-items/[id]/drop` API endpoint entirely (which are removed).
 - **Transition Validation & API Design**:
   - Unified state-transition API endpoint `PATCH /api/work-items/[id]/state`.
+  - Request body requires `project` (a registered project id), matching the existing `PATCH /api/work-items/[id]` and (removed) `POST /api/work-items/[id]/drop` conventions — it resolves which project's local SQLite database `createRepositories` opens. Missing `project` returns `400 Bad Request`; an unregistered `project` returns `404 Not Found`.
   - Core write layer (`updateWorkItemState` in `src/core/work-items.ts`) validates state changes (`next.state !== current.state`) against the 8-transition canonical matrix in `minna-state-model.md`.
   - Same-state updates (e.g. phase updates where `next.state === current.state`) bypass state-change transition validation.
   - Core service throws a custom `IllegalStateTransitionError` carrying `{ from, to, allowed }`.

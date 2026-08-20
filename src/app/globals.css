@@ -170,7 +170,11 @@ body {
 .feature-modal-backdrop { align-items: center; background: rgb(15 21 18 / 60%); display: flex; inset: 0; justify-content: center; padding: 24px; position: fixed; z-index: 110; }
 .feature-modal, .feature-confirm-modal { background: #fff; border-radius: 10px; box-shadow: 0 20px 60px rgb(0 0 0 / 30%); color: var(--text-primary); display: flex; flex-direction: column; gap: 20px; max-height: 86vh; overflow-y: auto; padding: 28px; width: min(520px, 100%); }
 .feature-confirm-modal { gap: 16px; width: min(380px, 100%); }
-.feature-confirm-modal--drop { width: min(400px, 100%); }
+.close-reason-modal { width: min(400px, 100%); }
+.close-reason-options { border: 0; display: grid; gap: 8px; margin: 0; padding: 0; }
+.close-reason-options legend { color: #7c8983; font: 600 11px var(--font-ui); letter-spacing: .8px; margin-bottom: 8px; text-transform: uppercase; }
+.close-reason-options label { align-items: center; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; display: flex; font: 500 13px var(--font-body); gap: 8px; padding: 9px 10px; }
+.close-reason-options label:has(input:checked) { background: #e5f9fa; border-color: #00c9d6; }
 .feature-modal h2, .feature-confirm-modal h2 { font: 600 18px var(--font-body); margin: 0; }
 .feature-modal header p { color: var(--text-muted); font: 400 12px var(--font-ui); margin: 4px 0 0; }
 .feature-confirm-modal p { color: var(--text-secondary); font: 400 13px/1.5 var(--font-body); margin: 0; }
@@ -210,7 +214,18 @@ body {
 .journal-assignee-avatar img { object-fit: contain; }
 .journal-details-toggle { align-items: center; background: transparent; border: 0; border-radius: 6px; color: #7c8983; cursor: pointer; display: flex; height: 22px; justify-content: center; padding: 0; transition: background .15s, color .15s; width: 22px; }
 .journal-details-toggle:hover, .journal-details-toggle--active { background: #7c8983; color: #eceff0; }
-.journal-status { border-radius: 4px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; padding: 5px 8px; text-transform: uppercase; }
+.journal-status-menu { position: relative; }
+.journal-status { align-items: center; border-radius: 4px; display: inline-flex; font-family: var(--font-mono); font-size: 12px; font-weight: 700; gap: 4px; padding: 5px 14px; text-transform: uppercase; }
+.journal-status-menu .journal-status { border: 0; cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.journal-status-menu .journal-status:disabled { cursor: wait; opacity: .7; }
+.journal-status-menu:hover .journal-status { box-shadow: 0 2px 5px rgb(0 0 0 / 16%); transform: translateY(-1px); }
+.journal-status-menu:focus-within .journal-status { box-shadow: 0 2px 5px rgb(0 0 0 / 16%); transform: translateY(-1px); }
+.journal-status svg { height: 14px; width: 14px; }
+.journal-status-dropdown { left: 0; min-width: 110px; padding-top: 6px; position: absolute; top: 100%; z-index: 30; }
+.journal-status-dropdown::before { background: #fff; border: 1px solid #dbe0dd; border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / 14%); content: ""; inset: 6px 0 0; position: absolute; }
+.journal-status-dropdown button { background: transparent; border: 0; border-radius: 4px; color: #0f1512; cursor: pointer; display: block; font: 500 12px var(--font-mono); padding: 8px 10px; position: relative; text-align: left; white-space: nowrap; width: 100%; }
+.journal-status-dropdown button + button { margin-top: 2px; }
+.journal-status-dropdown button:hover { background: #f3f5f4; }
 .journal-status--parked { background: #dbe0dd; color: #4a544d; }
 .journal-status--active { background: #00f0ff; color: #101614; }
 .journal-status--blocked { background: #7a1f30; color: #fff; }
@@ -238,10 +253,20 @@ body {
 .journal-empty-state { color: var(--text-secondary); margin: auto; max-width: 320px; text-align: center; }
 .journal-empty-state h1, .journal-empty-state h2 { color: var(--text-primary); font-family: var(--font-ui); font-size: 16px; margin: 0 0 8px; }
 .journal-empty-state p { font-size: 14px; line-height: 1.5; margin: 0; }
+.quick-phrases-bar { align-items: center; border-top: 1px solid #dbe0dd; display: flex; gap: 6px; padding: 10px 24px; }
+.quick-phrases-list { display: flex; flex: 1; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.quick-phrases-list::-webkit-scrollbar { display: none; }
+.quick-phrases-chip { background: #fff; border: 1px solid #dbe0dd; border-radius: 6px; color: #4a544d; cursor: pointer; flex: 0 0 auto; font: 500 12px var(--font-mono); padding: 7px 12px; }
+.quick-phrases-chip:hover { background: #00f0ff; color: #101614; }
+.quick-phrases-chip:disabled { cursor: wait; opacity: .7; }
+.quick-phrases-scroll { align-items: center; background: #fff; border: 1px solid #dbe0dd; border-radius: 50%; color: #4a544d; cursor: pointer; display: flex; flex: 0 0 22px; height: 22px; justify-content: center; padding: 0; width: 22px; }
+.quick-phrases-scroll--left svg { transform: rotate(180deg); }
+.quick-phrases-scroll:hover { background: #f3f5f4; }
 .journal-composer { border-top: 1px solid var(--border); padding: 14px 24px 6px; }
+.journal-composer--with-quick-phrases { border-top: 0; padding-top: 0; }
 .journal-composer-row { gap: 8px; }
-.journal-composer input { background: #fff; border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); flex: 1; font: 400 14px var(--font-ui); height: 40px; min-width: 0; padding: 0 18px; }
-.journal-send-button { background: #00c9d6; border: 0; border-radius: 4px; color: #101614; cursor: pointer; font-size: 19px; height: 40px; width: 40px; }
+.journal-composer textarea { background: #fff; border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); flex: 1; font: 400 14px var(--font-ui); min-height: 56px; min-width: 0; padding: 9px 18px; resize: none; }
+.journal-send-button { background: #00c9d6; border: 0; border-radius: 4px; color: #101614; cursor: pointer; font-size: 19px; height: 56px; width: 56px; }
 .journal-send-button svg { transform: translate(-1px, 1px); }
 .journal-send-button:hover { background: #00f0ff; }
 .journal-git-info { color: var(--text-muted); display: block; font: 400 10px var(--font-mono); margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

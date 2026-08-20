@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { initDb } from "./db.js";
-import { classifyEventFamily } from "./work-item-model.js";
+import { classifyEventFamily, IllegalStateTransitionError } from "./work-item-model.js";
 import {
   appendWorkItemEvent,
   createWorkItem,
@@ -126,10 +126,39 @@ test("setting state to blocked with each blocked_reason produces the item read b
     for (const reason of reasons) {
       const id = `celia-blocked-${counter++}`;
       await createWorkItem(db, "human", { id, title: id, description: "d", work_item_type: "issue", project: "celia" });
+      await updateWorkItemState(db, "minna", id, { state: "active" });
       const updated = await updateWorkItemState(db, "minna", id, { state: "blocked", blocked_reason: reason });
       assert.equal(updated.state, "blocked");
       assert.equal(updated.blocked_reason, reason);
     }
+  });
+});
+
+test("rejects an illegal state transition without recording an event or changing the projection", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", { id: "celia-invalid-transition", title: "t", description: "d", work_item_type: "issue", project: "celia" });
+
+    await assert.rejects(
+      () => updateWorkItemState(db, "human", "celia-invalid-transition", { state: "blocked", blocked_reason: "ci-pending" }),
+      (error: unknown) => error instanceof IllegalStateTransitionError
+        && error.from === "parked"
+        && error.to === "blocked"
+        && JSON.stringify(error.allowed) === JSON.stringify(["active", "closed"]),
+    );
+
+    assert.equal((await readWorkItemEvents(db, "celia-invalid-transition")).length, 1);
+    assert.equal((await readWorkItems(db, { project: "celia" })).find(item => item.id === "celia-invalid-transition")?.state, "parked");
+  });
+});
+
+test("allows a same-state phase update", async () => {
+  await withScratchDb(async db => {
+    await createWorkItem(db, "human", { id: "celia-phase-update", title: "t", description: "d", work_item_type: "feature", project: "celia" });
+
+    const updated = await updateWorkItemState(db, "minna", "celia-phase-update", { state: "parked", phase: "plan" });
+
+    assert.equal(updated.state, "parked");
+    assert.equal(updated.phase, "plan");
   });
 });
 
@@ -146,6 +175,7 @@ test("rejects blocked_reason when state is not blocked", async () => {
 test("rejects blocked state without a blocked_reason", async () => {
   await withScratchDb(async db => {
     await createWorkItem(db, "human", { id: "celia-201", title: "t", description: "d", work_item_type: "issue", project: "celia" });
+    await updateWorkItemState(db, "minna", "celia-201", { state: "active" });
     await assert.rejects(
       () => updateWorkItemState(db, "minna", "celia-201", { state: "blocked" }),
       /blocked_reason/i,

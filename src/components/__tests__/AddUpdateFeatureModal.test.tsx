@@ -5,7 +5,7 @@ import { DiscardFeatureConfirmModal } from "../DiscardConfirmModal";
 
 test("enforces feature field limits and enables Save only after a change", () => {
   const onSave = jest.fn();
-  render(<AddUpdateFeatureModal mode="create" nextId="001" onCancel={jest.fn()} onDrop={jest.fn()} onSave={onSave} projectName="Atlas" />);
+  render(<AddUpdateFeatureModal mode="create" nextId="001" onCancel={jest.fn()} onSave={onSave} projectName="Atlas" />);
 
   const save = screen.getByRole("button", { name: "Save" });
   expect(save).toBeDisabled();
@@ -22,7 +22,7 @@ test("enforces feature field limits and enables Save only after a change", () =>
 });
 
 test("preserves typed details while switching attachment tabs", () => {
-  render(<AddUpdateFeatureModal mode="create" nextId="001" onCancel={jest.fn()} onDrop={jest.fn()} onSave={jest.fn()} projectName="Atlas" />);
+  render(<AddUpdateFeatureModal mode="create" nextId="001" onCancel={jest.fn()} onSave={jest.fn()} projectName="Atlas" />);
 
   fireEvent.change(screen.getByLabelText("Feature details"), { target: { value: "Detailed brief" } });
   fireEvent.click(screen.getByRole("tab", { name: "Attach MD file" }));
@@ -32,7 +32,7 @@ test("preserves typed details while switching attachment tabs", () => {
 
 test("requests a discard confirmation for dirty feature edits", () => {
   const onCancel = jest.fn();
-  render(<AddUpdateFeatureModal mode="create" nextId="001" onCancel={onCancel} onDrop={jest.fn()} onSave={jest.fn()} projectName="Atlas" />);
+  render(<AddUpdateFeatureModal mode="create" nextId="001" onCancel={onCancel} onSave={jest.fn()} projectName="Atlas" />);
 
   fireEvent.change(screen.getByLabelText("Feature title"), { target: { value: "Refund flow" } });
   fireEvent.click(screen.getByRole("button", { name: "Discard" }));

@@ -82,9 +82,9 @@ export function RemoveIcon() {
   );
 }
 
-export function SendIcon() {
+export function SendIcon({ size = 18 }: { size?: number }) {
   return (
-    <svg aria-hidden="true" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+    <svg aria-hidden="true" fill="none" height={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width={size}>
       <path d="m22 2-11 11" />
       <path d="m22 2-7 20-4-9-9-4Z" />
     </svg>

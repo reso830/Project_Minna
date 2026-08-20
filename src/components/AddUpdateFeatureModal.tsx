@@ -20,10 +20,9 @@ interface AddUpdateFeatureModalProps {
   feature?: WorkItem;
   onSave: (draft: FeatureDraft) => void;
   onCancel: (dirty: boolean) => void;
-  onDrop: () => void;
 }
 
-export function AddUpdateFeatureModal({ mode, projectName, nextId, feature, onSave, onCancel, onDrop }: AddUpdateFeatureModalProps) {
+export function AddUpdateFeatureModal({ mode, projectName, nextId, feature, onSave, onCancel }: AddUpdateFeatureModalProps) {
   const initial: FeatureDraft = {
     title: feature?.title ?? "",
     description: feature?.description ?? "",
@@ -93,7 +92,7 @@ export function AddUpdateFeatureModal({ mode, projectName, nextId, feature, onSa
           )}
         </div>
         <footer className="feature-modal-actions">
-          <span>{mode === "update" && <button className="feature-button--danger" onClick={onDrop} type="button">Drop Feature</button>}</span>
+          <span />
           <button onClick={() => onCancel(dirty)} type="button">Discard</button>
           <button disabled={!dirty} onClick={() => onSave(draft)} type="button">Save</button>
         </footer>

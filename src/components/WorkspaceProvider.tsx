@@ -3,17 +3,23 @@
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 
 import { mockEvents, mockFeatures } from "../core/mockData";
-import type { ProjectRegistry, ProjectRegistryEntry, WorkItem, WorkItemEvent } from "../core/types";
+import type { ClosedReason, ProjectRegistry, ProjectRegistryEntry, WorkItem, WorkItemEvent, WorkItemState } from "../core/types";
 import { ErrorModal } from "./ErrorModal";
 import { DiscardConfirmModal } from "./DiscardConfirmModal";
 import { EditProjectModal } from "./EditProjectModal";
 import { RemoveConfirmModal } from "./RemoveConfirmModal";
 import { AddUpdateFeatureModal, type FeatureDraft } from "./AddUpdateFeatureModal";
-import { DropConfirmModal } from "./DropConfirmModal";
 import { DiscardFeatureConfirmModal } from "./DiscardConfirmModal";
 
 type RightTab = "agents" | "md" | "diff";
 type WorkspaceView = "journal" | "board";
+
+export interface QuickPhraseEcho {
+  actor: "human";
+  kind: "quick_phrase_echo";
+  summary: string;
+  timestamp: string;
+}
 
 interface WorkspaceContextValue {
   activeFeatureId: string | null;
@@ -25,6 +31,7 @@ interface WorkspaceContextValue {
   features: WorkItem[];
   projects: ProjectRegistry;
   events: Record<string, WorkItemEvent[]>;
+  quickPhraseEchoes: Record<string, QuickPhraseEcho[]>;
   resolvedDecisions: Record<string, Record<string, string>>;
   selectFeature: (featureId: string) => void;
   setRightTab: (tab: RightTab) => void;
@@ -36,9 +43,11 @@ interface WorkspaceContextValue {
   requestProjectRemoval: (project: ProjectRegistryEntry) => void;
   toggleAgent: (agentId: string) => void;
   submitReply: (featureId: string, text: string) => void;
+  appendQuickPhraseEcho: (featureId: string, text: string) => void;
   submitDecision: (featureId: string, decisionId: string, option: string) => void;
   createFeature: (project: ProjectRegistryEntry) => void;
   editFeature: (feature: WorkItem) => void;
+  transitionFeatureState: (featureId: string, nextState: WorkItemState, closedReason?: ClosedReason) => Promise<boolean>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -115,6 +124,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [features, setFeatures] = useState<WorkItem[]>(() => [...mockFeatures]);
   const [projects, setProjects] = useState<ProjectRegistry>([]);
   const [events, setEvents] = useState<Record<string, WorkItemEvent[]>>(cloneEvents);
+  const [quickPhraseEchoes, setQuickPhraseEchoes] = useState<Record<string, QuickPhraseEcho[]>>({});
   const [resolvedDecisions, setResolvedDecisions] = useState<Record<string, Record<string, string>>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<ProjectRegistryEntry | null>(null);
@@ -122,7 +132,6 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [featureEditor, setFeatureEditor] = useState<{ project: ProjectRegistryEntry; feature?: WorkItem } | null>(null);
   const [confirmFeatureDiscard, setConfirmFeatureDiscard] = useState(false);
-  const [confirmFeatureDrop, setConfirmFeatureDrop] = useState(false);
 
   useEffect(() => {
     const storedFeatureId = window.sessionStorage.getItem("minna_active_feature_id");
@@ -145,14 +154,17 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
 
     const replyEvents = cloneEvents();
     const decisions: Record<string, Record<string, string>> = {};
+    const echoes: Record<string, QuickPhraseEcho[]> = {};
     for (const feature of mockFeatures) {
       replyEvents[feature.id] = [...replyEvents[feature.id], ...readJson<WorkItemEvent[]>(`minna_replies_${feature.id}`, [])];
+      echoes[feature.id] = readJson<QuickPhraseEcho[]>(`minna_quick_phrase_echoes_${feature.id}`, []);
       const featureDecisions = readJson<Record<string, string>>(`minna_decisions_${feature.id}`, {});
       if (Object.keys(featureDecisions).length > 0) {
         decisions[feature.id] = featureDecisions;
       }
     }
     setEvents(replyEvents);
+    setQuickPhraseEchoes(echoes);
     setResolvedDecisions(decisions);
     setFeatures((currentFeatures) =>
       currentFeatures.map((feature) =>
@@ -220,6 +232,7 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
     features,
     projects,
     events,
+    quickPhraseEchoes,
     resolvedDecisions,
     selectFeature: (featureId) => {
       setActiveFeatureId(featureId);
@@ -319,6 +332,22 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       const replies = readJson<WorkItemEvent[]>(`minna_replies_${featureId}`, []);
       window.sessionStorage.setItem(`minna_replies_${featureId}`, JSON.stringify([...replies, reply]));
     },
+    appendQuickPhraseEcho: (featureId, text) => {
+      const summary = text.trim();
+      if (!summary) return;
+
+      const echo: QuickPhraseEcho = {
+        actor: "human",
+        kind: "quick_phrase_echo",
+        summary,
+        timestamp: new Date().toISOString(),
+      };
+      setQuickPhraseEchoes((current) => {
+        const next = { ...current, [featureId]: [...(current[featureId] ?? []), echo] };
+        window.sessionStorage.setItem(`minna_quick_phrase_echoes_${featureId}`, JSON.stringify(next[featureId]));
+        return next;
+      });
+    },
     submitDecision: (featureId, decisionId, option) => {
       const confirmation: WorkItemEvent = {
         work_item_id: featureId,
@@ -346,7 +375,32 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       const replies = readJson<WorkItemEvent[]>(`minna_replies_${featureId}`, []);
       window.sessionStorage.setItem(`minna_replies_${featureId}`, JSON.stringify([...replies, confirmation]));
     },
-  }), [activeFeatureId, activeProjectId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, projects, resolvedDecisions]);
+    transitionFeatureState: async (featureId, nextState, closedReason) => {
+      const feature = features.find(candidate => candidate.id === featureId);
+      const project = feature && projects.find(candidate => projectMatchesFeature(candidate, feature));
+      if (!feature || !project) {
+        setValidationError("The feature's project could not be resolved.");
+        return false;
+      }
+      try {
+        const response = await fetch(`/api/work-items/${featureId}/state`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project: project.id, state: nextState, ...(closedReason ? { closed_reason: closedReason } : {}) }),
+        });
+        const workItem: unknown = await response.json();
+        if (!response.ok || !isWorkItem(workItem)) {
+          setValidationError((workItem as { error?: unknown }).error as string ?? "The feature state could not be changed.");
+          return false;
+        }
+        setFeatures(current => current.map(candidate => candidate.id === workItem.id ? workItem : candidate));
+        return true;
+      } catch {
+        setValidationError("The feature state could not be changed.");
+        return false;
+      }
+    },
+  }), [activeFeatureId, activeProjectId, activeRightTab, activeView, events, expandedAgents, expandedProjects, features, projects, quickPhraseEchoes, resolvedDecisions]);
 
   const saveFeature = async (draft: FeatureDraft) => {
     if (!featureEditor) return;
@@ -374,30 +428,6 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       setFeatureEditor(null);
     } catch {
       setValidationError("The feature could not be saved.");
-    }
-  };
-
-  const dropFeature = async () => {
-    const feature = featureEditor?.feature;
-    const project = featureEditor?.project;
-    if (!feature || !project) return;
-    try {
-      const response = await fetch(`/api/work-items/${feature.id}/drop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ project: project.id }) });
-      const data: unknown = await response.json();
-      const workItem = (data as { workItem?: unknown }).workItem;
-      if (!response.ok || !isWorkItem(workItem)) {
-        setValidationError((data as { message?: unknown }).message as string ?? "The feature could not be dropped.");
-        return;
-      }
-      setFeatures(current => current.map(candidate => candidate.id === workItem.id ? workItem : candidate));
-      if (activeFeatureId === workItem.id) {
-        const fallback = features.find(candidate => candidate.id !== workItem.id && projectMatchesFeature(project, candidate));
-        setActiveFeatureId(fallback?.id ?? null);
-      }
-      setConfirmFeatureDrop(false);
-      setFeatureEditor(null);
-    } catch {
-      setValidationError("The feature could not be dropped.");
     }
   };
 
@@ -482,12 +512,10 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
         mode={featureEditor.feature ? "update" : "create"}
         nextId={String(Math.max(0, ...features.filter(feature => projectMatchesFeature(featureEditor.project, feature)).map(feature => Number(feature.id) || 0)) + 1).padStart(3, "0")}
         onCancel={(dirty) => dirty ? setConfirmFeatureDiscard(true) : setFeatureEditor(null)}
-        onDrop={() => setConfirmFeatureDrop(true)}
         onSave={(draft) => void saveFeature(draft)}
         projectName={featureEditor.project.name}
       />}
       {confirmFeatureDiscard && <DiscardFeatureConfirmModal onDiscard={() => { setConfirmFeatureDiscard(false); setFeatureEditor(null); }} onKeepEditing={() => setConfirmFeatureDiscard(false)} />}
-      {confirmFeatureDrop && featureEditor?.feature && <DropConfirmModal onCancel={() => setConfirmFeatureDrop(false)} onDrop={() => void dropFeature()} title={featureEditor.feature.title} />}
     </WorkspaceContext.Provider>
   );
 }

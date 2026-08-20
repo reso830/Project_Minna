@@ -13,7 +13,7 @@ import type {
   WorkItemState,
   WorkItemType,
 } from "./types.js";
-import { derivePhaseGroup, getPhaseSequence } from "./work-item-model.js";
+import { derivePhaseGroup, getPhaseSequence, validateStateTransition } from "./work-item-model.js";
 
 export interface CreateWorkItemInput {
   id?: string;
@@ -291,6 +291,9 @@ export async function updateWorkItemState(
   next: UpdateWorkItemStateInput,
 ): Promise<WorkItem> {
   const current = await readWorkItemRow(db, id);
+  if (next.state !== current.state) {
+    validateStateTransition(current.state, next.state);
+  }
   const phase = next.phase ?? current.phase;
   const blockedReason = next.blocked_reason ?? null;
   const closedReason = current.closed_reason ?? next.closed_reason ?? null;

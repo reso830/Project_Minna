@@ -162,6 +162,7 @@ test("verifyDb reflects a work item's state_changed history and reports drift af
     await createWorkItem(db, "human", {
       id: "verify-transition-wi", title: "t", description: "d", work_item_type: "issue", project: "p",
     });
+    await updateWorkItemState(db, "minna", "verify-transition-wi", { state: "active" });
     await updateWorkItemState(db, "minna", "verify-transition-wi", { state: "blocked", blocked_reason: "ci-pending" });
     assert.equal((await verifyDb(db)).consistent, true);
 

@@ -32,12 +32,12 @@ console.log(`Closed state: ${closed.state}, reason: ${closed.closed_reason}`); /
 # Transition parked -> active
 curl -X PATCH http://localhost:3000/api/work-items/001/state \
   -H "Content-Type: application/json" \
-  -d '{"state": "active"}'
+  -d '{"project": "minna", "state": "active"}'
 
 # Attempt illegal transition (closed -> active) -> Expect 422
 curl -X PATCH http://localhost:3000/api/work-items/001/state \
   -H "Content-Type: application/json" \
-  -d '{"state": "active"}'
+  -d '{"project": "minna", "state": "active"}'
 ```
 
 ### 3. Run Verification Tests

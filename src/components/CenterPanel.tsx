@@ -3,9 +3,12 @@
 import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import type { WorkItem, WorkItemEvent } from "../core/types";
+import type { ClosedReason, WorkItem, WorkItemEvent } from "../core/types";
 import { InfoIcon, PinIcon, SendIcon } from "./icons";
-import { useWorkspace } from "./WorkspaceProvider";
+import { CloseReasonModal } from "./CloseReasonModal";
+import { QuickPhrasesBar } from "./QuickPhrasesBar";
+import { StatusChipDropdown } from "./StatusChipDropdown";
+import { useWorkspace, type QuickPhraseEcho } from "./WorkspaceProvider";
 
 interface DecisionPrompt {
   id: string;
@@ -25,6 +28,10 @@ function getDecisionPrompt(event: WorkItemEvent): DecisionPrompt | null {
   }
 
   return { id: payload.decision_id, options: payload.options };
+}
+
+function isQuickPhraseEcho(event: WorkItemEvent | QuickPhraseEcho): event is QuickPhraseEcho {
+  return "kind" in event && event.kind === "quick_phrase_echo";
 }
 
 function formatTime(timestamp: string): string {
@@ -86,20 +93,27 @@ export function CenterPanel() {
   const {
     activeFeatureId,
     events,
+    quickPhraseEchoes,
     features,
     resolvedDecisions,
     submitDecision,
     submitReply,
+    appendQuickPhraseEcho,
+    transitionFeatureState,
   } = useWorkspace();
   const [reply, setReply] = useState("");
   const [isHovered, setIsHovered] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [isCloseReasonOpen, setIsCloseReasonOpen] = useState(false);
+  const [isTransitionPending, setIsTransitionPending] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAtBottomRef = useRef(true);
   const previousTimeline = useRef({ featureId: null as string | null, length: 0 });
   const activeFeature = features.find((feature) => feature.id === activeFeatureId) ?? null;
-  const timeline = activeFeature ? events[activeFeature.id] ?? [] : [];
+  const timeline = activeFeature
+    ? [...(events[activeFeature.id] ?? []), ...(quickPhraseEchoes?.[activeFeature.id] ?? [])].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+    : [];
   const isDetailsVisible = isPinned || isHovered;
 
   const captureScrollState = () => {
@@ -177,6 +191,25 @@ export function CenterPanel() {
     setReply("");
   };
 
+  const performTransition = async (nextState: WorkItem["state"], closedReason?: ClosedReason): Promise<boolean> => {
+    if (isTransitionPending) return false;
+    setIsTransitionPending(true);
+    try {
+      return await transitionFeatureState(activeFeatureId!, nextState, closedReason);
+    } finally {
+      setIsTransitionPending(false);
+    }
+  };
+
+  const startFeature = async () => {
+    if (!activeFeature) return;
+
+    const featureId = activeFeature.id;
+    if (await performTransition("active")) {
+      appendQuickPhraseEcho(featureId, "Start this feature.");
+    }
+  };
+
   if (!activeFeature) {
     return (
       <section aria-label="Journal thread" className="center-panel center-panel--empty-selection">
@@ -197,7 +230,12 @@ export function CenterPanel() {
           <h1>{activeFeature.title}</h1>
         </div>
         <div className="journal-header-actions">
-          <span className={`journal-status journal-status--${activeFeature.state}`}>{activeFeature.state}</span>
+          <StatusChipDropdown
+            disabled={isTransitionPending}
+            onClose={() => !isTransitionPending && setIsCloseReasonOpen(true)}
+            onPause={() => void performTransition("parked")}
+            state={activeFeature.state}
+          />
           <button className="journal-tasks-button" type="button">Tasks</button>
           <button
             aria-label="Show details"
@@ -241,11 +279,11 @@ export function CenterPanel() {
           </div>
         ) : (
           timeline.map((event, index) => {
-            const decision = getDecisionPrompt(event);
+            const decision = isQuickPhraseEcho(event) ? null : getDecisionPrompt(event);
             const resolvedOption = decision ? resolvedDecisions[activeFeature.id]?.[decision.id] : undefined;
 
             return (
-              <article className="journal-event" key={`${event.timestamp}-${index}-${event.type}`}>
+              <article className="journal-event" key={`${event.timestamp}-${index}-${isQuickPhraseEcho(event) ? event.kind : event.type}`}>
                 <span aria-hidden="true" className={`journal-avatar journal-avatar--${event.actor}`}>
                   {avatarInitial(event.actor)}
                 </span>
@@ -279,24 +317,39 @@ export function CenterPanel() {
         )}
       </div>
 
-      <footer className="journal-composer">
+      {activeFeature.state === "parked" && (
+        <QuickPhrasesBar disabled={isTransitionPending} phrases={["Start this feature."]} onSelect={() => void startFeature()} />
+      )}
+
+      <footer className={`journal-composer${activeFeature.state === "parked" ? " journal-composer--with-quick-phrases" : ""}`}>
         <div className="journal-composer-row">
-          <input
+          <textarea
             aria-label={`Reply to ${activeFeature.title}`}
             onChange={(event) => setReply(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") {
+              if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 sendReply();
               }
             }}
             placeholder="Send reply"
+            rows={2}
             value={reply}
           />
-          <button aria-label="Send reply" className="journal-send-button" onClick={sendReply} type="button"><SendIcon /></button>
+          <button aria-label="Send reply" className="journal-send-button" onClick={sendReply} type="button"><SendIcon size={24} /></button>
         </div>
         <span className="journal-git-info">{activeFeature.branch ? `(a1c9e42) ${activeFeature.branch}` : "No branch created"}</span>
       </footer>
+      {isCloseReasonOpen && (
+        <CloseReasonModal
+          disabled={isTransitionPending}
+          onCancel={() => setIsCloseReasonOpen(false)}
+          onConfirm={async (reason: ClosedReason) => {
+            if (await performTransition("closed", reason)) setIsCloseReasonOpen(false);
+          }}
+          title={activeFeature.title}
+        />
+      )}
     </section>
   );
 }
