@@ -22,7 +22,7 @@ Transitions a work item's state and updates its closed reason if transitioning t
 
 #### Success Response (`200 OK`)
 
-- **Body**: Updated `WorkItem` object.
+- **Body**: Updated `WorkItem` object with the authoritative persisted `work_item.state_changed` event.
   ```json
   {
     "id": "001",
@@ -39,7 +39,23 @@ Transitions a work item's state and updates its closed reason if transitioning t
     "pr_url": null,
     "feature_brief_path": ".minna/features/001-journal-view.md",
     "created_at": "2026-07-24T09:00:00Z",
-    "updated_at": "2026-08-19T13:50:00Z"
+    "updated_at": "2026-08-19T13:50:00Z",
+    "event": {
+      "id": 42,
+      "work_item_id": "001",
+      "timestamp": "2026-08-19T13:50:00Z",
+      "actor": "human",
+      "type": "work_item.state_changed",
+      "summary": "State changed to 'active'",
+      "artifact_path": null,
+      "payload": {
+        "from": "parked",
+        "to": "active",
+        "phase": "spec",
+        "blocked_reason": null,
+        "closed_reason": null
+      }
+    }
   }
   ```
 
@@ -93,6 +109,38 @@ Returned when `project` does not resolve to a registered project.
     "error": "Work item '999' was not found."
   }
   ```
+
+---
+
+## Persisted Work-Item Events Endpoint
+
+### `GET /api/work-items/[id]/events?project=<project-id>`
+
+Reads a work item's persisted journal events in journal order. This endpoint is used to hydrate the Journal View timeline for a project loaded from its local database.
+
+#### Success Response (`200 OK`)
+
+- **Body**: Array of persisted work-item events, each with the same fields as the `event` returned by the state transition endpoint.
+
+#### Error Response: Missing Project (`400 Bad Request`)
+
+```json
+{ "error": "Missing required query parameter: project" }
+```
+
+#### Error Response: Not Found (`404 Not Found`)
+
+Returned when the project is not registered or the requested work item is not part of that project.
+
+```json
+{ "error": "Project 'celia' not found." }
+```
+
+or
+
+```json
+{ "error": "Work item '999' was not found." }
+```
 
 ---
 
