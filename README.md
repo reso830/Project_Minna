@@ -36,7 +36,7 @@ npm run start:cli -- export --feature <id> ./specs/001-event-journal
 
 ## Journal View Workspace
 
-The Journal View is a local Next.js workspace connected to local project database REST API endpoints, allowing you to manage backlogs, edit descriptions, view event timelines, and drop features.
+The Journal View is a local Next.js workspace connected to local project database REST API endpoints, allowing you to manage backlogs, edit descriptions, view event timelines, and transition work-item state.
 
 ```bash
 npm run dev                 # Development UI at http://localhost:3000
@@ -85,9 +85,9 @@ Use the Add Project interface in the local web application at `http://localhost:
 
 ## Scaffold Gaps
 
-This version handles work-item management, expandable feature details panel, title bar redesign with assignee avatar badges, details brief file normalization, and soft-dropping. A few limitations remain as explicit follow-up work:
+This version handles work-item management, expandable feature details panel, title bar redesign with assignee avatar badges, details brief file normalization, and canonical state transitions. A few limitations remain as explicit follow-up work:
 
-- **Work-Item Transition Legality**: While the soft-drop ("Drop Feature") transition is now validated, other general phase and state transitions in the state model are not yet structurally enforced at the database layer.
+- **Phase Transition Legality**: State transitions are enforced at the database write layer. General phase-progress rules beyond membership in a work-item type's phase sequence remain follow-up work.
 - **Concurrent SQLite Writers**: Concurrent writers on the local project database (`minna.db`) are not yet fully optimized (e.g. WAL mode and busy timeouts are not configured on the project database connection). While immediate transactions prevent duplicate-ID races from corrupting data, concurrent CLI and web UI writes remain subject to temporary locking under higher write contention.
 - **Agent Loops**: Enforcing automated agent execution loop transitions.
 - **Visual Boards**: Visual Kanban or board views.

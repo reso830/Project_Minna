@@ -13,7 +13,7 @@ import type {
   WorkItemState,
   WorkItemType,
 } from "./types.js";
-import { derivePhaseGroup, getPhaseSequence } from "./work-item-model.js";
+import { derivePhaseGroup, getPhaseSequence, validateStateTransition } from "./work-item-model.js";
 
 export interface CreateWorkItemInput {
   id?: string;
@@ -290,19 +290,22 @@ export async function updateWorkItemState(
   id: string,
   next: UpdateWorkItemStateInput,
 ): Promise<WorkItem> {
-  const current = await readWorkItemRow(db, id);
-  const phase = next.phase ?? current.phase;
-  const blockedReason = next.blocked_reason ?? null;
-  const closedReason = current.closed_reason ?? next.closed_reason ?? null;
-
-  assertPhaseBelongsToType(current.work_item_type, phase);
-  assertBlockedReasonConsistency(next.state, blockedReason);
-  assertClosedReasonConsistency(next.state, closedReason);
-
-  const timestamp = new Date().toISOString();
-
-  db.exec("BEGIN TRANSACTION");
+  db.exec("BEGIN IMMEDIATE TRANSACTION");
   try {
+    const current = await readWorkItemRow(db, id);
+    if (next.state !== current.state) {
+      validateStateTransition(current.state, next.state);
+    }
+    const phase = next.phase ?? current.phase;
+    const blockedReason = next.blocked_reason ?? null;
+    const closedReason = current.closed_reason ?? next.closed_reason ?? null;
+
+    assertPhaseBelongsToType(current.work_item_type, phase);
+    assertBlockedReasonConsistency(next.state, blockedReason);
+    assertClosedReasonConsistency(next.state, closedReason);
+
+    const timestamp = new Date().toISOString();
+
     db.prepare(
       `INSERT INTO events (timestamp, actor, type, payload, project, work_item_id, summary, artifact_path)
        VALUES (?, ?, 'work_item.state_changed', ?, ?, ?, ?, NULL)`,

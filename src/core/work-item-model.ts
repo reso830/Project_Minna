@@ -6,8 +6,34 @@ import type {
   Phase,
   PhaseGroup,
   WorkItemEventType,
+  WorkItemState,
   WorkItemType,
 } from "./types.js";
+
+export const CANONICAL_TRANSITIONS: Record<WorkItemState, WorkItemState[]> = {
+  parked: ["active", "closed"],
+  active: ["parked", "blocked", "closed"],
+  blocked: ["active", "parked", "closed"],
+  closed: [],
+};
+
+export class IllegalStateTransitionError extends Error {
+  constructor(
+    public readonly from: WorkItemState,
+    public readonly to: WorkItemState,
+    public readonly allowed: WorkItemState[],
+  ) {
+    super(`Illegal state transition from '${from}' to '${to}'.`);
+    this.name = "IllegalStateTransitionError";
+  }
+}
+
+export function validateStateTransition(from: WorkItemState, to: WorkItemState): void {
+  const allowed = CANONICAL_TRANSITIONS[from];
+  if (!allowed.includes(to)) {
+    throw new IllegalStateTransitionError(from, to, allowed);
+  }
+}
 
 const PHASE_GROUP_BY_PHASE: Record<Phase, PhaseGroup> = {
   spec: "define",

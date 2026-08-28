@@ -151,3 +151,72 @@ test("persists work items and their events through the local repositories", asyn
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("state transitions update the repository projection and record one state event", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "minna-repository-state-transition-"));
+  const databasePath = join(directory, ".minna", "minna.db");
+
+  try {
+    const repositories = await createRepositories({ dbPath: databasePath, projectKey: "state-project" });
+    try {
+      const created = await repositories.workItems.create("human", {
+        id: "001",
+        title: "state-item",
+        description: "transition through repository",
+        work_item_type: "issue",
+        project: "state-project",
+      });
+      await repositories.workItems.updateState("human", "001", { state: "active" });
+      const closed = await repositories.workItems.updateState("human", "001", { state: "closed", closed_reason: "done" });
+
+      assert.equal(closed.state, "closed");
+      assert.equal(closed.closed_reason, "done");
+      const events = await repositories.events.read("001");
+      assert.equal(events.length, 3);
+      assert.deepEqual(events.map(event => event.type), ["work_item.created", "work_item.state_changed", "work_item.state_changed"]);
+      assert.notEqual(closed.updated_at, created.updated_at);
+      assert.equal(closed.updated_at, events[2].timestamp);
+      assert.deepEqual(events[2].payload, {
+        from: "active",
+        to: "closed",
+        phase: "implement",
+        blocked_reason: null,
+        closed_reason: "done",
+      });
+    } finally {
+      repositories.close();
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("an illegal repository transition leaves the work-item journal unchanged", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "minna-repository-invalid-state-"));
+  const databasePath = join(directory, ".minna", "minna.db");
+
+  try {
+    const repositories = await createRepositories({ dbPath: databasePath, projectKey: "state-project" });
+    try {
+      await repositories.workItems.create("human", {
+        id: "001",
+        title: "state-item",
+        description: "transition through repository",
+        work_item_type: "issue",
+        project: "state-project",
+      });
+
+      await assert.rejects(
+        () => repositories.workItems.updateState("human", "001", { state: "blocked", blocked_reason: "ci-pending" }),
+        /Illegal state transition from 'parked' to 'blocked'/,
+      );
+
+      assert.equal((await repositories.events.read("001")).length, 1);
+      assert.equal((await repositories.workItems.list({ project: "state-project" }))[0].state, "parked");
+    } finally {
+      repositories.close();
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

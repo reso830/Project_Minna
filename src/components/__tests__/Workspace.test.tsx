@@ -149,6 +149,7 @@ test("clears the selected feature when its project is removed", async () => {
     .mockResolvedValueOnce({ ok: true, json: async () => [project] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ project: { ...project, available: undefined } }) })
     .mockResolvedValueOnce({ ok: true, json: async () => [mockFeatures[0]] })
+    .mockResolvedValueOnce({ ok: true, json: async () => [] })
     .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) });
   render(
     <WorkspaceProvider>
@@ -156,7 +157,8 @@ test("clears the selected feature when its project is removed", async () => {
     </WorkspaceProvider>,
   );
 
-  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
+  await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(4));
+  expect(global.fetch).toHaveBeenLastCalledWith("/api/work-items/checkout-redesign-001/events?project=checkout-redesign");
   fireEvent.click(screen.getByRole("button", { name: "Remove active project" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove Project" }));
 

@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { GET, POST } from "../route";
 import { PATCH } from "../[id]/route";
-import { POST as dropWorkItem } from "../[id]/drop/route";
+import { PATCH as transitionState } from "../[id]/state/route";
 import { openDb } from "../../../../core/db";
 import { prepareProject, registerProject } from "../../../../core/registry";
 import { readWorkItemEvents, updateWorkItemState } from "../../../../core/work-items";
@@ -179,22 +179,20 @@ test("marks a work item when its feature brief is missing", async () => {
   });
 });
 
-test("drops a work item, preserves its brief, and records the canonical state transition", async () => {
+test("closes a work item through the unified state endpoint and preserves its brief", async () => {
   await withProject(async project => {
     await POST(new Request("http://localhost/api/work-items", {
       method: "POST",
       body: JSON.stringify({ project: project.id, title: "Obsolete feature", description: "No longer needed.", detailsText: "keep this brief" }),
     }));
 
-    const response = await dropWorkItem(
-      new Request("http://localhost/api/work-items/001/drop", { method: "POST", body: JSON.stringify({ project: project.id }) }),
+    const response = await transitionState(
+      new Request("http://localhost/api/work-items/001/state", { method: "PATCH", body: JSON.stringify({ project: project.id, state: "closed", closed_reason: "dropped" }) }),
       { params: Promise.resolve({ id: "001" }) },
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual(expect.objectContaining({
-      workItem: expect.objectContaining({ id: "001", state: "closed", closed_reason: "dropped" }),
-    }));
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({ id: "001", state: "closed", closed_reason: "dropped" }));
     await expect(readFile(join(project.path, ".minna", "features", "001-obsolete-feature.md"), "utf8")).resolves.toBe("keep this brief");
 
     const db = openDb(join(project.path, ".minna", "minna.db"));
@@ -210,36 +208,36 @@ test("drops a work item, preserves its brief, and records the canonical state tr
   });
 });
 
-test("rejects dropping an already closed work item", async () => {
+test("rejects closing an already closed work item", async () => {
   await withProject(async project => {
     await POST(new Request("http://localhost/api/work-items", {
       method: "POST",
       body: JSON.stringify({ project: project.id, title: "Already closed", description: "Close once." }),
     }));
-    await dropWorkItem(
-      new Request("http://localhost/api/work-items/001/drop", { method: "POST", body: JSON.stringify({ project: project.id }) }),
+    await transitionState(
+      new Request("http://localhost/api/work-items/001/state", { method: "PATCH", body: JSON.stringify({ project: project.id, state: "closed", closed_reason: "dropped" }) }),
       { params: Promise.resolve({ id: "001" }) },
     );
 
-    const response = await dropWorkItem(
-      new Request("http://localhost/api/work-items/001/drop", { method: "POST", body: JSON.stringify({ project: project.id }) }),
+    const response = await transitionState(
+      new Request("http://localhost/api/work-items/001/state", { method: "PATCH", body: JSON.stringify({ project: project.id, state: "closed", closed_reason: "dropped" }) }),
       { params: Promise.resolve({ id: "001" }) },
     );
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Bad Request", message: "Cannot drop work item in terminal state 'closed'." });
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual({ error: "Illegal state transition from 'closed' to 'closed'.", from: "closed", to: "closed", allowed: [] });
   });
 });
 
-test("returns 404 when dropping an unknown work item", async () => {
+test("returns 404 when transitioning an unknown work item", async () => {
   await withProject(async project => {
-    const response = await dropWorkItem(
-      new Request("http://localhost/api/work-items/999/drop", { method: "POST", body: JSON.stringify({ project: project.id }) }),
+    const response = await transitionState(
+      new Request("http://localhost/api/work-items/999/state", { method: "PATCH", body: JSON.stringify({ project: project.id, state: "closed", closed_reason: "dropped" }) }),
       { params: Promise.resolve({ id: "999" }) },
     );
 
     expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({ error: "Not Found", message: "Work item with ID '999' not found." });
+    await expect(response.json()).resolves.toEqual({ error: "Work item '999' was not found." });
   });
 });
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 — State Transitions
+
+- Added operator-triggered state transitions for work items within the Journal View.
+- Added "Start" quick-phrase action rendered above composer for `parked` work items, executing `parked → active`.
+- Added status chip hover dropdown with 6px top-padding bridge displaying legal operator actions (`parked`: Close; `active`/`blocked`: Pause, Close; `closed`: none).
+- Added `CloseReasonModal` confirmation dialog prompting for `closed_reason` (`done` / `dropped` / `failed`), superseding and removing Feature 003's standalone `DropConfirmModal`.
+- Added core 8-transition canonical matrix validation (`validateStateTransition` and `IllegalStateTransitionError`) in `src/core/work-item-model.ts`, bypassing validation on same-state phase/metadata updates.
+- Added single `work_item.state_changed` event persistence written atomically with the `work_items` table update in SQLite.
+- Added unified `PATCH /api/work-items/[id]/state` endpoint returning `200 OK` or `422 Unprocessable Entity` with structured `{ error, from, to, allowed }` payloads, and removed `/api/work-items/[id]/drop`.
+- Added 2-row compose textarea (`rows={2}`) and enlarged 56x56 Send button in Journal View composer.
+
 ## 0.7.0 — Details Panel
 
 - Added an expandable Details panel to the Journal View title bar displaying read-only metadata (ID, Title, Type, Assignee, Description) for the active feature.
