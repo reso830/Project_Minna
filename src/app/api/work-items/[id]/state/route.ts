@@ -50,7 +50,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       blocked_reason: typeof body.blocked_reason === "string" ? body.blocked_reason as BlockedReason : null,
       closed_reason: typeof body.closed_reason === "string" ? body.closed_reason as ClosedReason : null,
     });
-    return NextResponse.json(workItem);
+    const event = (await repositories.events.read(id)).at(-1);
+    if (!event || event.type !== "work_item.state_changed") {
+      throw new Error("State transition event was not recorded.");
+    }
+    return NextResponse.json({ ...workItem, event });
   } catch (error) {
     if (error instanceof IllegalStateTransitionError) {
       return NextResponse.json({ error: error.message, from: error.from, to: error.to, allowed: error.allowed }, { status: 422 });

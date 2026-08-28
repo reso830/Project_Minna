@@ -30,8 +30,20 @@ function renderStatePanel(feature: WorkItem) {
     if (url.startsWith("/api/work-items?")) return response([currentFeature]);
     if (url.endsWith("/state")) {
       const body = JSON.parse(String(options?.body)) as { state: WorkItem["state"]; closed_reason?: "done" | "dropped" | "failed" };
+      const from = currentFeature.state;
       currentFeature = { ...currentFeature, state: body.state, closed_reason: body.closed_reason ?? null };
-      return response(currentFeature);
+      return response({
+        ...currentFeature,
+        event: {
+          work_item_id: currentFeature.id,
+          timestamp: "2026-08-20T01:00:00.000Z",
+          actor: "human",
+          type: "work_item.state_changed",
+          summary: `State changed from ${from} to ${body.state}.`,
+          artifact_path: null,
+          payload: { from, to: body.state, blocked_reason: null, closed_reason: body.closed_reason ?? null },
+        },
+      });
     }
     return Promise.resolve({ ok: false, json: async () => ({ error: "Unexpected request" }) });
   });

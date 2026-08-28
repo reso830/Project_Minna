@@ -64,8 +64,9 @@ Project_Minna/
           route.ts          # Lists registered projects with disk availability flags
         work-items/         # Next.js API Routes for Work Item Management
           [id]/
-            drop/route.ts   # Soft-drops/archives a work item
+            events/route.ts # Reads persisted events for a work item timeline
             route.ts        # Updates description and details brief files
+            state/route.ts  # Validates and records canonical work-item state transitions
           route.ts          # Lists and creates work items
       globals.css           # Main styling system variables, typography, and utility tokens
       layout.tsx
@@ -75,10 +76,12 @@ Project_Minna/
       AgentUsage.tsx        # Inline agent cost, quota, and runtime diagnostics bar
       CenterPanel.tsx       # Middle workspace timeline with 54px header, expandable Details panel, decisions, and replies
       DiscardConfirmModal.tsx # Confirmation dialog for discarding dirty changes
-      DropConfirmModal.tsx  # Confirmation dialog for soft-dropping a feature
+      CloseReasonModal.tsx  # Confirmation dialog that records a work-item close reason
       ErrorModal.tsx        # High-priority blocking dialog to render validation failures
       RightPanel.tsx        # Inspectable detail panel for active feature files and decisions
       Sidebar.tsx           # Navigation panel rendering projects, features, and operator details
+      StatusChipDropdown.tsx # Keyboard-accessible status actions for active work items
+      QuickPhrasesBar.tsx   # Deterministic operator quick-phrase controls for parked work items
       WorkspaceProvider.tsx # State provider managing selected projects, active features, and replies
       icons.tsx             # Shared SVGs for UI navigation and controls (including InfoIcon and PinIcon)
     core/                   # Core Domain Logic & Persistence

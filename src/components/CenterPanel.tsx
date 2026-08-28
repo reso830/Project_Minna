@@ -15,13 +15,6 @@ interface DecisionPrompt {
   options: string[];
 }
 
-interface StateTransitionDisplay {
-  actor: "minna";
-  kind: "state_transition_display";
-  summary: string;
-  timestamp: string;
-}
-
 function getDecisionPrompt(event: WorkItemEvent): DecisionPrompt | null {
   if (event.type !== "agent.question" || !event.payload || typeof event.payload !== "object") return null;
 
@@ -37,7 +30,7 @@ function getDecisionPrompt(event: WorkItemEvent): DecisionPrompt | null {
   return { id: payload.decision_id, options: payload.options };
 }
 
-function isDisplayOnlyTimelineEntry(event: WorkItemEvent | QuickPhraseEcho | StateTransitionDisplay): event is QuickPhraseEcho | StateTransitionDisplay {
+function isDisplayOnlyTimelineEntry(event: WorkItemEvent | QuickPhraseEcho): event is QuickPhraseEcho {
   return "kind" in event;
 }
 
@@ -47,12 +40,6 @@ function stateChangePresentation(event: WorkItemEvent): { actor: "minna"; summar
   const to = (event.payload as Record<string, unknown>).to;
   if (to === "parked") return { actor: "minna", summary: "Feature paused as requested." };
   if (to === "closed") return { actor: "minna", summary: "Feature closed as requested." };
-  return null;
-}
-
-function stateTransitionSummary(nextState: WorkItem["state"]): string | null {
-  if (nextState === "parked") return "Feature paused as requested.";
-  if (nextState === "closed") return "Feature closed as requested.";
   return null;
 }
 
@@ -128,14 +115,13 @@ export function CenterPanel() {
   const [isPinned, setIsPinned] = useState(false);
   const [isCloseReasonOpen, setIsCloseReasonOpen] = useState(false);
   const [isTransitionPending, setIsTransitionPending] = useState(false);
-  const [transitionDisplays, setTransitionDisplays] = useState<Record<string, StateTransitionDisplay[]>>({});
   const timelineRef = useRef<HTMLDivElement>(null);
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAtBottomRef = useRef(true);
   const previousTimeline = useRef({ featureId: null as string | null, length: 0 });
   const activeFeature = features.find((feature) => feature.id === activeFeatureId) ?? null;
   const timeline = activeFeature
-    ? [...(events[activeFeature.id] ?? []), ...(quickPhraseEchoes?.[activeFeature.id] ?? []), ...(transitionDisplays[activeFeature.id] ?? [])].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+    ? [...(events[activeFeature.id] ?? []), ...(quickPhraseEchoes?.[activeFeature.id] ?? [])].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
     : [];
   const isDetailsVisible = isPinned || isHovered;
 
@@ -218,13 +204,7 @@ export function CenterPanel() {
     if (isTransitionPending) return false;
     setIsTransitionPending(true);
     try {
-      const transitioned = await transitionFeatureState(activeFeatureId!, nextState, closedReason);
-      const summary = stateTransitionSummary(nextState);
-      if (transitioned && summary && activeFeatureId) {
-        const display: StateTransitionDisplay = { actor: "minna", kind: "state_transition_display", summary, timestamp: new Date().toISOString() };
-        setTransitionDisplays((current) => ({ ...current, [activeFeatureId]: [...(current[activeFeatureId] ?? []), display] }));
-      }
-      return transitioned;
+      return await transitionFeatureState(activeFeatureId!, nextState, closedReason);
     } finally {
       setIsTransitionPending(false);
     }

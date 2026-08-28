@@ -46,7 +46,16 @@ test("transitions a work item through the unified state endpoint", async () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual(expect.objectContaining({ id: "001", state: "active", closed_reason: null }));
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      id: "001",
+      state: "active",
+      closed_reason: null,
+      event: expect.objectContaining({
+        work_item_id: "001",
+        type: "work_item.state_changed",
+        payload: expect.objectContaining({ from: "parked", to: "active" }),
+      }),
+    }));
   });
 });
 

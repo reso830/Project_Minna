@@ -112,6 +112,16 @@ const isWorkItem = (value: unknown): value is WorkItem => {
   return typeof item.id === "string" && typeof item.title === "string" && typeof item.project === "string";
 };
 
+const isWorkItemEvent = (value: unknown): value is WorkItemEvent => {
+  if (typeof value !== "object" || value === null) return false;
+  const event = value as Partial<WorkItemEvent>;
+  return typeof event.work_item_id === "string"
+    && typeof event.timestamp === "string"
+    && typeof event.actor === "string"
+    && typeof event.type === "string"
+    && typeof event.summary === "string";
+};
+
 const projectMatchesFeature = (project: ProjectRegistryEntry, feature: WorkItem) => feature.project === project.id || feature.project === project.name;
 
 export function WorkspaceProvider({ children }: PropsWithChildren) {
@@ -211,11 +221,23 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
       if (!response.ok) return;
       const data: unknown = await response.json();
       if (!Array.isArray(data) || !data.every(isWorkItem)) return;
+      const persistedEvents = await Promise.all(data.map(async (feature) => {
+        try {
+          const eventResponse = await fetch(`/api/work-items/${feature.id}/events?project=${encodeURIComponent(project.id)}`);
+          const eventData: unknown = await eventResponse.json();
+          return [feature.id, eventResponse.ok && Array.isArray(eventData) && eventData.every(isWorkItemEvent) ? eventData : null] as const;
+        } catch {
+          return [feature.id, null] as const;
+        }
+      }));
       setFeatures(current => [
         ...current.filter(feature => !mockFeatureIds.has(feature.id) && !projectMatchesFeature(project, feature)),
         ...data,
       ]);
-      setEvents(current => ({ ...current, ...Object.fromEntries(data.map(feature => [feature.id, current[feature.id] ?? []])) }));
+      setEvents((current) => ({
+        ...current,
+        ...Object.fromEntries(persistedEvents.map(([featureId, featureEvents]) => [featureId, featureEvents ?? current[featureId] ?? []])),
+      }));
       setActiveFeatureId(current => (current && mockFeatureIds.has(current) ? data[0]?.id ?? null : current));
     } catch {
       // Existing local/demo state remains visible while the project database is unavailable.
@@ -388,12 +410,17 @@ export function WorkspaceProvider({ children }: PropsWithChildren) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ project: project.id, state: nextState, ...(closedReason ? { closed_reason: closedReason } : {}) }),
         });
-        const workItem: unknown = await response.json();
-        if (!response.ok || !isWorkItem(workItem)) {
-          setValidationError((workItem as { error?: unknown }).error as string ?? "The feature state could not be changed.");
+        const data: unknown = await response.json();
+        if (!response.ok || !isWorkItem(data)) {
+          setValidationError((data as { error?: unknown }).error as string ?? "The feature state could not be changed.");
           return false;
         }
+        const workItem = data;
+        const event = (data as WorkItem & { event?: unknown }).event;
         setFeatures(current => current.map(candidate => candidate.id === workItem.id ? workItem : candidate));
+        if (isWorkItemEvent(event)) {
+          setEvents(current => ({ ...current, [featureId]: [...(current[featureId] ?? []), event] }));
+        }
         return true;
       } catch {
         setValidationError("The feature state could not be changed.");
