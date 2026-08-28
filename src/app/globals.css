@@ -216,14 +216,12 @@ body {
 .journal-details-toggle:hover, .journal-details-toggle--active { background: #7c8983; color: #eceff0; }
 .journal-status-menu { position: relative; }
 .journal-status { align-items: center; border-radius: 4px; display: inline-flex; font-family: var(--font-mono); font-size: 12px; font-weight: 700; gap: 4px; padding: 5px 14px; text-transform: uppercase; }
-.journal-status-menu .journal-status { border: 0; cursor: pointer; transition: box-shadow .15s, transform .15s; }
+.journal-status-menu .journal-status { border: 0; cursor: pointer; }
 .journal-status-menu .journal-status:disabled { cursor: wait; opacity: .7; }
-.journal-status-menu:hover .journal-status { box-shadow: 0 2px 5px rgb(0 0 0 / 16%); transform: translateY(-1px); }
-.journal-status-menu:focus-within .journal-status { box-shadow: 0 2px 5px rgb(0 0 0 / 16%); transform: translateY(-1px); }
 .journal-status svg { height: 14px; width: 14px; }
 .journal-status-dropdown { left: 0; min-width: 110px; padding-top: 6px; position: absolute; top: 100%; z-index: 30; }
 .journal-status-dropdown::before { background: #fff; border: 1px solid #dbe0dd; border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / 14%); content: ""; inset: 6px 0 0; position: absolute; }
-.journal-status-dropdown button { background: transparent; border: 0; border-radius: 4px; color: #0f1512; cursor: pointer; display: block; font: 500 12px var(--font-mono); padding: 8px 10px; position: relative; text-align: left; white-space: nowrap; width: 100%; }
+.journal-status-dropdown button { background: transparent; border: 0; border-radius: 4px; color: #0f1512; cursor: pointer; display: block; font: 500 12px var(--font-mono); padding: 10px 14px; position: relative; text-align: left; white-space: nowrap; width: 100%; }
 .journal-status-dropdown button + button { margin-top: 2px; }
 .journal-status-dropdown button:hover { background: #f3f5f4; }
 .journal-status--parked { background: #dbe0dd; color: #4a544d; }
@@ -269,6 +267,8 @@ body {
 .journal-send-button { background: #00c9d6; border: 0; border-radius: 4px; color: #101614; cursor: pointer; font-size: 19px; height: 56px; width: 56px; }
 .journal-send-button svg { transform: translate(-1px, 1px); }
 .journal-send-button:hover { background: #00f0ff; }
+.journal-composer textarea:disabled { background: #f3f5f4; color: #8f9a94; cursor: not-allowed; }
+.journal-send-button:disabled, .journal-send-button:disabled:hover { background: #dfe6e2; color: #a7afac; cursor: not-allowed; }
 .journal-git-info { color: var(--text-muted); display: block; font: 400 10px var(--font-mono); margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .right-panel { background: #0c110f; display: flex; flex-direction: column; height: 100%; min-height: 0; }

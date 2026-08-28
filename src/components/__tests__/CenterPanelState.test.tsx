@@ -84,6 +84,19 @@ describe("CenterPanel state transitions", () => {
     expect(fetchMock).not.toHaveBeenCalledWith(`/api/work-items/${active.id}/state`, expect.anything());
   });
 
+  it("shows a Minna journal line after pausing an active feature", async () => {
+    const active = mockFeatures.find((feature) => feature.id === "checkout-redesign-001")!;
+    const fetchMock = renderStatePanel(active);
+    await selectLoadedFeature(fetchMock);
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Status: active" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+
+    await waitFor(() => expect(screen.getByText("parked", { selector: ".journal-status" })).toBeInTheDocument());
+    expect(screen.getByText("Feature paused as requested.")).toBeInTheDocument();
+    expect(window.sessionStorage.getItem(`minna_replies_${active.id}`)).toBeNull();
+  });
+
   it("closes an active feature with the selected done reason", async () => {
     const active = mockFeatures.find((feature) => feature.id === "checkout-redesign-001")!;
     const fetchMock = renderStatePanel(active);
@@ -96,10 +109,48 @@ describe("CenterPanel state transitions", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
 
     await waitFor(() => expect(screen.getByText("closed", { selector: ".journal-status" })).toBeInTheDocument());
+    expect(screen.getByText("Feature closed as requested.")).toBeInTheDocument();
+    expect(window.sessionStorage.getItem(`minna_replies_${active.id}`)).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(`/api/work-items/${active.id}/state`, expect.objectContaining({
       method: "PATCH",
       body: JSON.stringify({ project: "checkout-redesign", state: "closed", closed_reason: "done" }),
     }));
+  });
+
+  it("renders a paused state-change event as a Minna journal line", async () => {
+    const active = mockFeatures.find((feature) => feature.id === "checkout-redesign-001")!;
+    window.sessionStorage.setItem(`minna_replies_${active.id}`, JSON.stringify([{
+      work_item_id: active.id,
+      timestamp: "2026-08-20T01:00:00.000Z",
+      actor: "human",
+      type: "work_item.state_changed",
+      summary: "State changed from active to parked.",
+      artifact_path: null,
+      payload: { from: "active", to: "parked", blocked_reason: null, closed_reason: null },
+    }]));
+    const fetchMock = renderStatePanel(active);
+    await selectLoadedFeature(fetchMock);
+
+    const message = screen.getByText("Feature paused as requested.");
+    expect(within(message.closest("article")!).getByText("minna")).toBeInTheDocument();
+  });
+
+  it("renders a closed state-change event as a Minna journal line", async () => {
+    const closed = mockFeatures.find((feature) => feature.id === "checkout-redesign-003")!;
+    window.sessionStorage.setItem(`minna_replies_${closed.id}`, JSON.stringify([{
+      work_item_id: closed.id,
+      timestamp: "2026-08-20T01:00:00.000Z",
+      actor: "human",
+      type: "work_item.state_changed",
+      summary: "State changed from active to closed.",
+      artifact_path: null,
+      payload: { from: "active", to: "closed", blocked_reason: null, closed_reason: "done" },
+    }]));
+    const fetchMock = renderStatePanel(closed);
+    await selectLoadedFeature(fetchMock);
+
+    const message = screen.getByText("Feature closed as requested.");
+    expect(within(message.closest("article")!).getByText("minna")).toBeInTheDocument();
   });
 
   it("renders a closed feature as a non-interactive terminal state", async () => {
@@ -113,5 +164,12 @@ describe("CenterPanel state transitions", () => {
     expect(screen.queryByRole("button", { name: "Start this feature." })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pause" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+
+    const composer = screen.getByRole("textbox", { name: /reply to empty state copy/i });
+    expect(composer).toBeDisabled();
+    expect(composer.closest(".journal-composer")).toHaveClass("journal-composer--closed");
+    expect(screen.getByRole("button", { name: "Send reply" })).toBeDisabled();
+    fireEvent.keyDown(composer, { key: "Enter" });
+    expect(screen.queryByText("human")).not.toBeInTheDocument();
   });
 });

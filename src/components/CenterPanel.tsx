@@ -15,6 +15,13 @@ interface DecisionPrompt {
   options: string[];
 }
 
+interface StateTransitionDisplay {
+  actor: "minna";
+  kind: "state_transition_display";
+  summary: string;
+  timestamp: string;
+}
+
 function getDecisionPrompt(event: WorkItemEvent): DecisionPrompt | null {
   if (event.type !== "agent.question" || !event.payload || typeof event.payload !== "object") return null;
 
@@ -30,8 +37,23 @@ function getDecisionPrompt(event: WorkItemEvent): DecisionPrompt | null {
   return { id: payload.decision_id, options: payload.options };
 }
 
-function isQuickPhraseEcho(event: WorkItemEvent | QuickPhraseEcho): event is QuickPhraseEcho {
-  return "kind" in event && event.kind === "quick_phrase_echo";
+function isDisplayOnlyTimelineEntry(event: WorkItemEvent | QuickPhraseEcho | StateTransitionDisplay): event is QuickPhraseEcho | StateTransitionDisplay {
+  return "kind" in event;
+}
+
+function stateChangePresentation(event: WorkItemEvent): { actor: "minna"; summary: string } | null {
+  if (event.type !== "work_item.state_changed" || !event.payload || typeof event.payload !== "object") return null;
+
+  const to = (event.payload as Record<string, unknown>).to;
+  if (to === "parked") return { actor: "minna", summary: "Feature paused as requested." };
+  if (to === "closed") return { actor: "minna", summary: "Feature closed as requested." };
+  return null;
+}
+
+function stateTransitionSummary(nextState: WorkItem["state"]): string | null {
+  if (nextState === "parked") return "Feature paused as requested.";
+  if (nextState === "closed") return "Feature closed as requested.";
+  return null;
 }
 
 function formatTime(timestamp: string): string {
@@ -106,13 +128,14 @@ export function CenterPanel() {
   const [isPinned, setIsPinned] = useState(false);
   const [isCloseReasonOpen, setIsCloseReasonOpen] = useState(false);
   const [isTransitionPending, setIsTransitionPending] = useState(false);
+  const [transitionDisplays, setTransitionDisplays] = useState<Record<string, StateTransitionDisplay[]>>({});
   const timelineRef = useRef<HTMLDivElement>(null);
   const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAtBottomRef = useRef(true);
   const previousTimeline = useRef({ featureId: null as string | null, length: 0 });
   const activeFeature = features.find((feature) => feature.id === activeFeatureId) ?? null;
   const timeline = activeFeature
-    ? [...(events[activeFeature.id] ?? []), ...(quickPhraseEchoes?.[activeFeature.id] ?? [])].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+    ? [...(events[activeFeature.id] ?? []), ...(quickPhraseEchoes?.[activeFeature.id] ?? []), ...(transitionDisplays[activeFeature.id] ?? [])].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
     : [];
   const isDetailsVisible = isPinned || isHovered;
 
@@ -185,7 +208,7 @@ export function CenterPanel() {
   }, [activeFeatureId, timeline.length]);
 
   const sendReply = () => {
-    if (!activeFeature || !reply.trim()) return;
+    if (!activeFeature || activeFeature.state === "closed" || !reply.trim()) return;
 
     submitReply(activeFeature.id, reply);
     setReply("");
@@ -195,7 +218,13 @@ export function CenterPanel() {
     if (isTransitionPending) return false;
     setIsTransitionPending(true);
     try {
-      return await transitionFeatureState(activeFeatureId!, nextState, closedReason);
+      const transitioned = await transitionFeatureState(activeFeatureId!, nextState, closedReason);
+      const summary = stateTransitionSummary(nextState);
+      if (transitioned && summary && activeFeatureId) {
+        const display: StateTransitionDisplay = { actor: "minna", kind: "state_transition_display", summary, timestamp: new Date().toISOString() };
+        setTransitionDisplays((current) => ({ ...current, [activeFeatureId]: [...(current[activeFeatureId] ?? []), display] }));
+      }
+      return transitioned;
     } finally {
       setIsTransitionPending(false);
     }
@@ -279,20 +308,24 @@ export function CenterPanel() {
           </div>
         ) : (
           timeline.map((event, index) => {
-            const decision = isQuickPhraseEcho(event) ? null : getDecisionPrompt(event);
+            const isDisplayOnly = isDisplayOnlyTimelineEntry(event);
+            const decision = isDisplayOnly ? null : getDecisionPrompt(event);
             const resolvedOption = decision ? resolvedDecisions[activeFeature.id]?.[decision.id] : undefined;
+            const presentation = isDisplayOnly ? null : stateChangePresentation(event);
+            const actor = presentation?.actor ?? event.actor;
+            const summary = presentation?.summary ?? event.summary;
 
             return (
-              <article className="journal-event" key={`${event.timestamp}-${index}-${isQuickPhraseEcho(event) ? event.kind : event.type}`}>
-                <span aria-hidden="true" className={`journal-avatar journal-avatar--${event.actor}`}>
-                  {avatarInitial(event.actor)}
+              <article className="journal-event" key={`${event.timestamp}-${index}-${isDisplayOnly ? event.kind : event.type}`}>
+                <span aria-hidden="true" className={`journal-avatar journal-avatar--${actor}`}>
+                  {avatarInitial(actor)}
                 </span>
                 <div className="journal-event-content">
                   <div className="journal-event-meta">
-                    <span>{actorLabel(event.actor)}</span>
+                    <span>{actorLabel(actor)}</span>
                     <time dateTime={event.timestamp}> · {formatTime(event.timestamp)}</time>
                   </div>
-                  <div className="journal-bubble">{event.summary}</div>
+                  <div className="journal-bubble">{summary}</div>
                   {decision && (
                     resolvedOption ? (
                       <span className="journal-decision-resolved">✓ {resolvedOption}</span>
@@ -321,10 +354,11 @@ export function CenterPanel() {
         <QuickPhrasesBar disabled={isTransitionPending} phrases={["Start this feature."]} onSelect={() => void startFeature()} />
       )}
 
-      <footer className={`journal-composer${activeFeature.state === "parked" ? " journal-composer--with-quick-phrases" : ""}`}>
+      <footer className={`journal-composer${activeFeature.state === "parked" ? " journal-composer--with-quick-phrases" : ""}${activeFeature.state === "closed" ? " journal-composer--closed" : ""}`}>
         <div className="journal-composer-row">
           <textarea
             aria-label={`Reply to ${activeFeature.title}`}
+            disabled={activeFeature.state === "closed"}
             onChange={(event) => setReply(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
@@ -336,7 +370,7 @@ export function CenterPanel() {
             rows={2}
             value={reply}
           />
-          <button aria-label="Send reply" className="journal-send-button" onClick={sendReply} type="button"><SendIcon size={24} /></button>
+          <button aria-label="Send reply" className="journal-send-button" disabled={activeFeature.state === "closed"} onClick={sendReply} type="button"><SendIcon size={24} /></button>
         </div>
         <span className="journal-git-info">{activeFeature.branch ? `(a1c9e42) ${activeFeature.branch}` : "No branch created"}</span>
       </footer>
